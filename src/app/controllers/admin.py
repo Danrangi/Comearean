@@ -1,29 +1,31 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, Response
 from src.app import db
-from src.app.models import Exam, Subject, Question, User
+from src.app.models import Exam, Subject, Question
 import csv
 import io
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-@bp.before_request
-def restrict_to_admin():
-    if not g.user or g.user.role not in ['superadmin', 'centeradmin']:
-        flash("Unauthorized access.", "danger")
-        return redirect(url_for('auth.login'))
-
-@bp.route('/')
+@bp.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':
+        exam_id = request.form.get('exam_id')
+        name = request.form.get('subject_name')
+        if exam_id and name:
+            new_sub = Subject(name=name, exam_id=exam_id)
+            db.session.add(new_sub)
+            db.session.commit()
+            flash(f"Subject '{name}' created!", "success")
+            return redirect(url_for('admin.index'))
+
     exams = Exam.query.all()
-    all_subjects = Subject.query.order_by(Subject.exam_id, Subject.name).all()
-    return render_template('admin/admin_panel.html', exams=exams, subjects=all_subjects)
+    subjects = Subject.query.all()
+    return render_template('admin/admin_panel.html', exams=exams, subjects=subjects)
 
 @bp.route('/questions/<int:subject_id>', methods=['GET', 'POST'])
 def manage_questions(subject_id):
     subject = Subject.query.get_or_404(subject_id)
-    
     if request.method == 'POST':
-        # Check if it is a CSV upload
         if 'file' in request.files:
             file = request.files['file']
             if file.filename.endswith('.csv'):
@@ -42,9 +44,7 @@ def manage_questions(subject_id):
                     )
                     db.session.add(q)
                 db.session.commit()
-                flash("CSV Uploaded successfully!", "success")
-        
-        # Or a single question add
+                flash("CSV Uploaded!", "success")
         elif 'question_text' in request.form:
             q = Question(
                 text=request.form['question_text'],
@@ -59,7 +59,7 @@ def manage_questions(subject_id):
             db.session.add(q)
             db.session.commit()
             flash("Question added!", "success")
-
+    
     questions = Question.query.filter_by(subject_id=subject_id).all()
     return render_template('admin/questions.html', subject=subject, questions=questions)
 
@@ -75,7 +75,6 @@ def edit_question(question_id):
         question.correct_option = request.form['correct_answer']
         question.explanation = request.form['explanation']
         db.session.commit()
-        flash("Question updated!", "success")
         return redirect(url_for('admin.manage_questions', subject_id=question.subject_id))
     return render_template('admin/edit_question.html', question=question)
 
@@ -85,7 +84,6 @@ def delete_question(question_id):
     sid = question.subject_id
     db.session.delete(question)
     db.session.commit()
-    flash("Question deleted.", "info")
     return redirect(url_for('admin.manage_questions', subject_id=sid))
 
 @bp.route('/download_sample_csv')
