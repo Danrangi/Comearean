@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary fw-bold">{{ subject.name }}</h2>
+        <span class="text-muted">{{ questions|length }} Questions Found</span>
+    </div>
+    <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary">Back</a>
+</div>
+
+<div class="card p-4 mb-4 border-primary shadow-sm bg-white">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-primary mb-0">Bulk Upload Questions</h5>
+        <a href="{{ url_for('admin.download_sample_csv') }}" class="btn btn-sm btn-info text-white">Download Sample CSV</a>
+    </div>
+    <form method="POST" enctype="multipart/form-data" class="row g-2 align-items-center">
+        <div class="col-md-9">
+            <input type="file" name="file" class="form-control" accept=".csv" required>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">Upload CSV</button>
+        </div>
+    </form>
+</div>
+
+<div class="card p-4 mb-5 shadow-sm">
+    <h5 class="mb-3">Add Single Question</h5>
+    <form method="POST">
+        <div class="mb-3">
+            <textarea name="question_text" class="form-control" placeholder="Question Text" rows="2" required></textarea>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6"><input type="text" name="option_a" class="form-control" placeholder="Option A" required></div>
+            <div class="col-md-6"><input type="text" name="option_b" class="form-control" placeholder="Option B" required></div>
+            <div class="col-md-6"><input type="text" name="option_c" class="form-control" placeholder="Option C" required></div>
+            <div class="col-md-6"><input type="text" name="option_d" class="form-control" placeholder="Option D" required></div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <select name="correct_answer" class="form-select" required>
+                    <option value="">Correct Answer...</option>
+                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                </select>
+            </div>
+            <div class="col-md-8"><input type="text" name="explanation" class="form-control" placeholder="Explanation (Optional)"></div>
+        </div>
+        <button type="submit" class="btn btn-success mt-3 w-100 fw-bold">Save Question</button>
+    </form>
+</div>
+
+{% for q in questions %}
+<div class="card mb-3 shadow-sm border-0">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <h6 class="fw-bold">{{ loop.index }}. {{ q.text }}</h6>
+            <div class="btn-group">
+                <a href="{{ url_for('admin.edit_question', question_id=q.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <form action="{{ url_for('admin.delete_question', question_id=q.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+        <div class="row small mt-2">
+            <div class="col-md-6">A. {{ q.option_a }} {% if q.correct_option == 'A' %}✅{% endif %}</div>
+            <div class="col-md-6">B. {{ q.option_b }} {% if q.correct_option == 'B' %}✅{% endif %}</div>
+            <div class="col-md-6">C. {{ q.option_c }} {% if q.correct_option == 'C' %}✅{% endif %}</div>
+            <div class="col-md-6">D. {{ q.option_d }} {% if q.correct_option == 'D' %}✅{% endif %}</div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
