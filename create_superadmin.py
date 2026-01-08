@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from src.app import db, create_app
 from src.app.models import User
 
@@ -8,6 +12,6 @@ with app.app_context():
         user.set_password('master123')
         db.session.add(user)
         db.session.commit()
-        print("Super Admin created! User: admin, Pass: master123")
+        print("[+] Super Admin created: admin / master123")
     else:
-        print("Super Admin already exists.")
+        print("[!] Super Admin already exists.")

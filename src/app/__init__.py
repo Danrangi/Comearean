@@ -34,7 +34,10 @@ def create_app():
     def license_expired():
         return "<h1>License Required</h1><p>Contact Super Admin.</p>"
 
-    # Register Blueprints with absolute paths
+    from src.app.controllers import auth, super_admin, admin
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(super_admin.bp)
+    app.register_blueprint(admin.bp) with absolute paths
     from src.app.controllers import auth, super_admin
     app.register_blueprint(auth.bp)
     app.register_blueprint(super_admin.bp)
