@@ -1,0 +1,4 @@
+{
+  "SECRET_KEY": "change-this-to-a-random-secret",
+  "SQLALCHEMY_DATABASE_URI": "sqlite:///instance/exam_data.db"
+}
