@@ -1,4 +1,5 @@
 {
-  "SECRET_KEY": "change-this-to-a-random-secret",
-  "SQLALCHEMY_DATABASE_URI": "sqlite:///instance/exam_data.db"
+  "SECRET_KEY": "test-secret-123",
+  "SQLALCHEMY_DATABASE_URI": "sqlite:///instance/exam_data.db",
+  "SKIP_LICENSE": true
 }
