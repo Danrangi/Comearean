@@ -17,11 +17,11 @@ def create_app():
     def check_license():
         if request.endpoint in ['license_expired', 'static', 'auth.login']:
             return
-        from .utils.license import verify_license
+        from src.app.utils.license import verify_license
         if app.config.get('SKIP_LICENSE', False):
             return
-        token_path = os.path.join(app.instance_path, 'license.bin')
-        key_path = os.path.join(app.instance_path, 'license.key')
+        token_path = os.path.join(app.INSTANCE_DIR, 'license.bin')
+        key_path = os.path.join(app.INSTANCE_DIR, 'license.key')
         if not os.path.exists(key_path):
             return redirect(url_for('license_expired'))
         with open(key_path, 'r') as f:
@@ -34,13 +34,11 @@ def create_app():
     def license_expired():
         return "<h1>License Required</h1><p>Contact Super Admin.</p>"
 
+    # Register Blueprints
     from src.app.controllers import auth, super_admin, admin
     app.register_blueprint(auth.bp)
     app.register_blueprint(super_admin.bp)
-    app.register_blueprint(admin.bp) with absolute paths
-    from src.app.controllers import auth, super_admin
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(super_admin.bp)
+    app.register_blueprint(admin.bp)
 
     @app.route('/')
     def root():
