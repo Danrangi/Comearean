@@ -9,39 +9,37 @@ bp = Blueprint('admin', __name__, url_prefix='/admin')
 def restrict_access():
     if not g.user:
         return redirect(url_for('auth.login'))
-    # Allow Super Admin to manage questions, Allow Center Admin to manage students
     if g.user.role not in ['superadmin', 'centeradmin']:
         return redirect(url_for('main.dashboard'))
 
-@bp.route('/')
+@bp.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST' and g.user.role == 'superadmin':
+        exam_id = request.form.get('exam_id')
+        name = request.form.get('subject_name')
+        if exam_id and name:
+            new_sub = Subject(name=name, exam_id=exam_id)
+            db.session.add(new_sub)
+            db.session.commit()
+            flash(f"Subject '{name}' created.", "success")
+        return redirect(url_for('admin.index'))
+
     if g.user.role == 'centeradmin':
         students = User.query.filter_by(center_id=g.user.center_id, role='student').all()
-        results = Result.query.filter_by(center_id=g.user.center_id).all()
-        return render_template('admin/center_dashboard.html', students=students, results=results)
+        return render_template('admin/center_dashboard.html', students=students)
     
-    # Super Admin View (Question Bank)
     exams = Exam.query.all()
     subjects = Subject.query.all()
     return render_template('admin/question_bank.html', exams=exams, subjects=subjects)
 
-@bp.route('/student/add', methods=['POST'])
-def add_student():
-    if g.user.role != 'centeradmin':
-        return "Access Denied", 403
-        
-    username = request.form.get('username')
-    password = request.form.get('password')
-    
-    if User.query.filter_by(username=username).first():
-        flash("Student ID already exists!", "danger")
-    else:
-        new_student = User(username=username, role='student', center_id=g.user.center_id)
-        new_student.set_password(password)
-        db.session.add(new_student)
+@bp.route('/subject/edit/<int:id>', methods=['GET', 'POST'])
+def edit_subject(id):
+    sub = Subject.query.get_or_404(id)
+    if request.method == 'POST':
+        sub.name = request.form['name']
         db.session.commit()
-        flash(f"Student {username} created successfully.", "success")
-    return redirect(url_for('admin.index'))
+        return redirect(url_for('admin.index'))
+    return render_template('admin/edit_subject.html', subject=sub)
 
 @bp.route('/questions/<int:subject_id>', methods=['GET', 'POST'])
 def manage_questions(subject_id):
@@ -58,7 +56,6 @@ def manage_questions(subject_id):
                              explanation=row.get('explanation', ''), subject_id=subject_id)
                 db.session.add(q)
             db.session.commit()
-            flash("CSV Uploaded!", "success")
         else:
             q = Question(text=request.form['question_text'], option_a=request.form['option_a'],
                          option_b=request.form['option_b'], option_c=request.form['option_c'],
@@ -66,14 +63,8 @@ def manage_questions(subject_id):
                          explanation=request.form['explanation'], subject_id=subject_id)
             db.session.add(q)
             db.session.commit()
-            flash("Question added!", "success")
     questions = Question.query.filter_by(subject_id=subject_id).all()
     return render_template('admin/questions.html', subject=subject, questions=questions)
-
-@bp.route('/download_sample_csv')
-def download_sample_csv():
-    csv_content = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
-    return Response(csv_content, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=sample.csv"})
 
 @bp.route('/question/edit/<int:id>', methods=['GET', 'POST'])
 def edit_question(id):
@@ -97,3 +88,30 @@ def delete_question(id):
     db.session.delete(q)
     db.session.commit()
     return redirect(url_for('admin.manage_questions', subject_id=sid))
+
+@bp.route('/download_sample_csv')
+def download_sample_csv():
+    csv_content = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
+    return Response(csv_content, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=sample.csv"})
+
+@bp.route('/student/add', methods=['POST'])
+def add_student():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    if User.query.filter_by(username=username).first():
+        flash("Student ID exists.", "danger")
+    else:
+        student = User(username=username, role='student', center_id=g.user.center_id)
+        student.set_password(password)
+        db.session.add(student)
+        db.session.commit()
+        flash("Student registered.", "success")
+    return redirect(url_for('admin.index'))
+
+@bp.route('/student/reset/<int:id>')
+def reset_student(id):
+    student = User.query.get_or_404(id)
+    student.is_writing = False
+    db.session.commit()
+    flash(f"Session reset for {student.username}", "info")
+    return redirect(url_for('admin.index'))

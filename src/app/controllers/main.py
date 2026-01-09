@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, g, request, session, flash
 from src.app.models import Exam, Subject, Question, Result, db
 from .auth import login_required
+import json
 
 bp = Blueprint('main', __name__)
 
@@ -21,40 +22,48 @@ def exam_setup(exam_id):
 @login_required
 def take_exam():
     exam_id = request.form.get('exam_id')
-    selected_subject_ids = request.form.getlist('subjects')
+    selected_ids = request.form.getlist('subjects')
     exam = Exam.query.get(exam_id)
+    
+    g.user.is_writing = True
+    db.session.commit()
 
-    if len(selected_subject_ids) != exam.required_subjects:
-        flash(f"Please select exactly {exam.required_subjects} subjects for {exam.name}.", "warning")
-        return redirect(url_for('main.exam_setup', exam_id=exam_id))
-
-    # Load questions for all selected subjects
     exam_data = {}
-    for sid in selected_subject_ids:
+    for sid in selected_ids:
         sub = Subject.query.get(sid)
-        questions = Question.query.filter_by(subject_id=sid).limit(40 if exam.name == 'JAMB' else 60).all()
-        # Prepare for template: list of items with options split
-        sub_items = []
-        for q in questions:
-            opts = [
-                {'key': 'A', 'text': q.option_a},
-                {'key': 'B', 'text': q.option_b},
-                {'key': 'C', 'text': q.option_c},
-                {'key': 'D', 'text': q.option_d}
-            ]
-            sub_items.append({'q': q, 'opts': opts})
+        # Limit questions: JAMB 40/sub, WAEC/NECO 60/sub
+        qs = Question.query.filter_by(subject_id=sid).limit(40 if exam.name == 'JAMB' else 60).all()
+        sub_items = [{'q': q, 'opts': [{'key':'A','text':q.option_a},{'key':'B','text':q.option_b},{'key':'C','text':q.option_c},{'key':'D','text':q.option_d}]} for q in qs]
         exam_data[sub.name] = sub_items
 
-    return render_template('student/war_room.html', 
-                           exam_data=exam_data, 
-                           exam=exam, 
-                           mode=exam.name)
+    return render_template('student/war_room.html', exam_data=exam_data, exam=exam, mode=exam.name)
+
+@bp.route('/submit-exam', methods=['POST'])
+@login_required
+def submit_exam():
+    total_score = 0
+    total_q = 0
+    
+    # Process answers from request.form
+    for key, value in request.form.items():
+        if key.startswith('q_'):
+            q_id = int(key.split('_')[1])
+            question = Question.query.get(q_id)
+            if question and question.correct_option == value:
+                total_score += 1
+            total_q += 1
+
+    res = Result(user_id=g.user.id, center_id=g.user.center_id, 
+                 exam_name=request.form.get('exam_name', 'Mock'),
+                 score=float(total_score), total_questions=total_q)
+    
+    g.user.is_writing = False
+    db.session.add(res)
+    db.session.commit()
+    
+    flash(f"Exam Submitted! Your score: {total_score}/{total_q}", "success")
+    return redirect(url_for('main.dashboard'))
 
 @bp.route('/ai-preview')
-@login_required
 def ai_preview():
-    return "<h1>AI Performance Analysis</h1><p>Under Construction: Offline AI engine is being integrated.</p>"
-
-@bp.route('/about')
-def about():
-    return "ExamArena v1.0 - Suleja Digital Innovation Hub"
+    return "<h1>AI Review</h1><p>Offline AI Analysis engine under construction.</p>"

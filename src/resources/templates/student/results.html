@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="card shadow-lg p-5">
+        <h1 class="display-4 fw-bold">Result: {{ result.score|int }}/{{ result.total_questions }}</h1>
+        <p class="lead">Exam: {{ result.exam_name }}</p>
+        <hr>
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">Back to Dashboard</a>
+            <button class="btn btn-outline-info" onclick="window.print()">Print Result</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
