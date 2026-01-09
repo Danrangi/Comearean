@@ -31,12 +31,15 @@ def login():
             session.clear()
             session['user_id'] = user.id
             session['role'] = user.role
+            
             if user.role == 'superadmin':
                 return redirect(url_for('super_admin.index'))
-            # Note: We will add the centeradmin redirect once admin.py is created
-            return redirect(url_for('auth.login'))
+            elif user.role == 'centeradmin':
+                return redirect(url_for('admin.index'))
+            else:
+                return redirect(url_for('main.dashboard'))
         
-        flash('Invalid Credentials')
+        flash('Invalid Username or Password', 'danger')
     return render_template('auth/login.html')
 
 @bp.route('/logout')
