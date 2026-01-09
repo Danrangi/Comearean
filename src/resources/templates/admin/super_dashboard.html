@@ -12,6 +12,7 @@
         <div class="card p-3 shadow-sm">
             <h5>Create Center & Admin</h5>
             <form action="{{ url_for('super_admin.add_center') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="text" name="name" class="form-control mb-2" placeholder="Center Name" required>
                 <input type="text" name="location" class="form-control mb-2" placeholder="Location" required>
                 <hr>
