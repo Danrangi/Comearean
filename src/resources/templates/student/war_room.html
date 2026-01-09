@@ -33,17 +33,11 @@
         }
         .option-card:hover { background: #f8f9fa; border-color: #aaa; }
         .option-card.selected { background: #d4edda; border-color: var(--exam-accent); }
-        .calc-modal { 
-            display: none; position: fixed; top: 100px; right: 320px; width: 250px; 
-            background: #333; padding: 15px; border-radius: 10px; z-index: 1000;
-        }
-        .calc-display { width: 100%; height: 40px; text-align: right; margin-bottom: 10px; font-size: 1.2rem; }
-        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-        .calc-btn { height: 40px; border: none; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
     <form method="POST" action="{{ url_for('main.submit_exam') }}" id="examForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="exam_name" value="{{ exam.name }}">
 
         <header class="war-room-header">
@@ -55,11 +49,7 @@
                 </button>
                 {% endfor %}
             </div>
-
             <div class="d-flex align-items-center gap-3">
-                <button type="button" class="btn btn-outline-dark btn-sm" onclick="toggleCalc()">
-                    <i class="fas fa-calculator"></i>
-                </button>
                 <div class="timer-display" id="timer">00:00:00</div>
                 <button type="button" class="btn btn-danger fw-bold" onclick="confirmSubmit()">Submit</button>
             </div>
@@ -69,16 +59,17 @@
             <div class="main-stage">
                 <div class="tab-content h-100">
                     {% for subject_name, items in exam_data.items() %}
-                    {% set subject_index = loop.index %}
-                    <div class="tab-pane fade h-100 {% if loop.first %}show active{% endif %}" id="content-{{ subject_index }}">
-                        <div class="h-100" style="overflow-y: auto; padding-bottom: 100px;" id="scroll-{{ subject_index }}">
+                    {% set subject_idx = loop.index %}
+                    <div class="tab-pane fade h-100 {% if loop.first %}show active{% endif %}" id="content-{{ subject_idx }}">
+                        <div class="h-100" style="overflow-y: auto; padding-bottom: 100px;" id="scroll-{{ subject_idx }}">
                             {% for item in items %}
-                            <div class="question-block mb-5" id="q-{{ subject_index }}-{{ loop.index }}">
-                                <h5 class="fw-bold">Question {{ loop.index }}</h5>
+                            {% set question_idx = loop.index %}
+                            <div class="question-block mb-5" id="q-{{ subject_idx }}-{{ question_idx }}">
+                                <h5 class="fw-bold">Question {{ question_idx }}</h5>
                                 <p class="fs-5">{{ item.q.text }}</p>
                                 <div class="options-list">
                                     {% for opt in item.opts %}
-                                    <div class="option-card" onclick="selectOption('q_{{ item.q.id }}', '{{ opt.key }}', this, {{ subject_index }}, {{ loop.index }})">
+                                    <div class="option-card" onclick="selectOption('q_{{ item.q.id }}', '{{ opt.key }}', this, {{ subject_idx }}, {{ question_idx }})">
                                         <input type="radio" name="q_{{ item.q.id }}" value="{{ opt.key }}" class="d-none">
                                         <strong>{{ opt.key }}.</strong> {{ opt.text }}
                                     </div>
@@ -94,12 +85,13 @@
             </div>
 
             <div class="nav-map">
-                <h6 class="fw-bold mb-3">Question Navigator</h6>
+                <h6 class="fw-bold mb-3">Navigator</h6>
                 {% for subject_name, items in exam_data.items() %}
-                <div class="question-grid subject-palette {% if not loop.first %}d-none{% endif %}" id="palette-{{ loop.index }}">
+                {% set nav_subject_idx = loop.index %}
+                <div class="question-grid subject-palette {% if not loop.first %}d-none{% endif %}" id="palette-{{ nav_subject_idx }}">
                     {% for item in items %}
-                    <a href="javascript:void(0)" onclick="scrollToQuestion({{ loop.parent.index }}, {{ loop.index }})" 
-                       class="grid-btn" id="btn-{{ loop.parent.index }}-{{ loop.index }}">{{ loop.index }}</a>
+                    <a href="javascript:void(0)" onclick="scrollToQuestion({{ nav_subject_idx }}, {{ loop.index }})" 
+                       class="grid-btn" id="btn-{{ nav_subject_idx }}-{{ loop.index }}">{{ loop.index }}</a>
                     {% endfor %}
                 </div>
                 {% endfor %}
@@ -107,28 +99,8 @@
         </div>
     </form>
 
-    <div class="calc-modal" id="calculator">
-        <input type="text" class="calc-display" id="calcDisplay" readonly>
-        <div class="calc-keys">
-            <button class="calc-btn btn-danger" onclick="calcClear()">C</button>
-            <button class="calc-btn btn-secondary" onclick="calcAppend('/')">/</button>
-            <button class="calc-btn btn-secondary" onclick="calcAppend('*')">*</button>
-            <button class="calc-btn btn-secondary" onclick="calcAppend('-')">-</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('7')">7</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('8')">8</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('9')">9</button>
-            <button class="calc-btn btn-secondary" onclick="calcAppend('+')">+</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('4')">4</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('5')">5</button>
-            <button class="calc-btn btn-light" onclick="calcAppend('6')">6</button>
-            <button class="calc-btn btn-success" onclick="calcSolve()">=</button>
-        </div>
-    </div>
-
     <script>
-        let currentSubjectIdx = 1;
         function switchTab(index, btn) {
-            currentSubjectIdx = index;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active'));
@@ -142,33 +114,22 @@
             radio.checked = true;
             card.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
-            document.getElementById(`btn-${subIdx}-${qIdx}`).classList.add('answered');
+            const navBtn = document.getElementById(`btn-${subIdx}-${qIdx}`);
+            if(navBtn) navBtn.classList.add('answered');
         }
 
         function scrollToQuestion(subIdx, qIdx) {
             const el = document.getElementById(`q-${subIdx}-${qIdx}`);
-            el.scrollIntoView({ behavior: 'smooth' });
+            if(el) el.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function toggleCalc() {
-            const calc = document.getElementById('calculator');
-            calc.style.display = calc.style.display === 'block' ? 'none' : 'block';
-        }
-        function calcAppend(v) { document.getElementById('calcDisplay').value += v; }
-        function calcClear() { document.getElementById('calcDisplay').value = ''; }
-        function calcSolve() { try { document.getElementById('calcDisplay').value = eval(document.getElementById('calcDisplay').value); } catch { document.getElementById('calcDisplay').value = 'Error'; } }
+        function confirmSubmit() { if(confirm("Submit exam?")) document.getElementById('examForm').submit(); }
 
-        function confirmSubmit() { if(confirm("Are you sure you want to submit?")) document.getElementById('examForm').submit(); }
-
-        // Timer Logic
         let timeLeft = {{ exam.duration_minutes * 60 }};
-        const timerElem = document.getElementById('timer');
-        const countdown = setInterval(() => {
-            if (timeLeft <= 0) { clearInterval(countdown); document.getElementById('examForm').submit(); }
-            let h = Math.floor(timeLeft / 3600);
-            let m = Math.floor((timeLeft % 3600) / 60);
-            let s = timeLeft % 60;
-            timerElem.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        setInterval(() => {
+            if (timeLeft <= 0) document.getElementById('examForm').submit();
+            let h = Math.floor(timeLeft / 3600), m = Math.floor((timeLeft % 3600) / 60), s = timeLeft % 60;
+            document.getElementById('timer').textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
             timeLeft--;
         }, 1000);
     </script>
