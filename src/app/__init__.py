@@ -1,9 +1,11 @@
 import os
 from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 from .config import Config
 
 db = SQLAlchemy()
+csrf = CSRFProtect()
 
 def create_app():
     app = Flask(__name__, 
@@ -11,7 +13,9 @@ def create_app():
                 static_folder='../resources/static')
     
     app.config.from_object(Config)
+    
     db.init_app(app)
+    csrf.init_app(app)
 
     @app.before_request
     def check_license():
@@ -20,8 +24,11 @@ def create_app():
         from src.app.utils.license import verify_license
         if app.config.get('SKIP_LICENSE', False):
             return
-        token_path = os.path.join(app.config['INSTANCE_DIR'], 'license.bin')
-        key_path = os.path.join(app.config['INSTANCE_DIR'], 'license.key')
+        
+        instance_dir = app.config.get('INSTANCE_DIR')
+        token_path = os.path.join(instance_dir, 'license.bin')
+        key_path = os.path.join(instance_dir, 'license.key')
+        
         if not os.path.exists(key_path):
             return redirect(url_for('license_expired'))
         with open(key_path, 'r') as f:

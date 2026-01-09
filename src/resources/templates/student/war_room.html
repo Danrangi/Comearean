@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam War Room - {{ exam.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+    <style>
+        :root { --exam-primary: #2c3e50; --exam-accent: #27ae60; }
+        body { background-color: #f4f7f6; overflow: hidden; height: 100vh; }
+        .war-room-header { 
+            height: 70px; background: white; border-bottom: 2px solid #ddd;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+        }
+        .subject-tabs-header { display: flex; gap: 5px; }
+        .tab-btn { 
+            padding: 10px 20px; border: none; background: #eee; font-weight: bold; 
+            border-radius: 5px 5px 0 0; cursor: pointer;
+        }
+        .tab-btn.active { background: var(--exam-primary); color: white; }
+        .timer-display { font-size: 1.5rem; font-weight: bold; font-family: monospace; color: #c0392b; }
+        .war-room-container { display: flex; height: calc(100vh - 70px); }
+        .main-stage { flex: 1; padding: 30px; overflow-y: auto; }
+        .nav-map { width: 300px; background: white; border-left: 2px solid #ddd; padding: 20px; }
+        .question-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .grid-btn { 
+            height: 40px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid #ccc; text-decoration: none; color: #333; font-weight: bold; border-radius: 4px;
+        }
+        .grid-btn.answered { background: var(--exam-accent); color: white; border-color: var(--exam-accent); }
+        .option-card { 
+            padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s;
+        }
+        .option-card:hover { background: #f8f9fa; border-color: #aaa; }
+        .option-card.selected { background: #d4edda; border-color: var(--exam-accent); }
+        .calc-modal { 
+            display: none; position: fixed; top: 100px; right: 320px; width: 250px; 
+            background: #333; padding: 15px; border-radius: 10px; z-index: 1000;
+        }
+        .calc-display { width: 100%; height: 40px; text-align: right; margin-bottom: 10px; font-size: 1.2rem; }
+        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .calc-btn { height: 40px; border: none; border-radius: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <form method="POST" action="{{ url_for('main.submit_exam') }}" id="examForm">
+        <input type="hidden" name="exam_name" value="{{ exam.name }}">
+
+        <header class="war-room-header">
+            <div class="subject-tabs-header">
+                {% for subject_name in exam_data.keys() %}
+                <button type="button" class="tab-btn {% if loop.first %}active{% endif %}" 
+                        onclick="switchTab({{ loop.index }}, this)" id="tab-btn-{{ loop.index }}">
+                    {{ subject_name }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="toggleCalc()">
+                    <i class="fas fa-calculator"></i>
+                </button>
+                <div class="timer-display" id="timer">00:00:00</div>
+                <button type="button" class="btn btn-danger fw-bold" onclick="confirmSubmit()">Submit</button>
+            </div>
+        </header>
+
+        <div class="war-room-container">
+            <div class="main-stage">
+                <div class="tab-content h-100">
+                    {% for subject_name, items in exam_data.items() %}
+                    {% set subject_index = loop.index %}
+                    <div class="tab-pane fade h-100 {% if loop.first %}show active{% endif %}" id="content-{{ subject_index }}">
+                        <div class="h-100" style="overflow-y: auto; padding-bottom: 100px;" id="scroll-{{ subject_index }}">
+                            {% for item in items %}
+                            <div class="question-block mb-5" id="q-{{ subject_index }}-{{ loop.index }}">
+                                <h5 class="fw-bold">Question {{ loop.index }}</h5>
+                                <p class="fs-5">{{ item.q.text }}</p>
+                                <div class="options-list">
+                                    {% for opt in item.opts %}
+                                    <div class="option-card" onclick="selectOption('q_{{ item.q.id }}', '{{ opt.key }}', this, {{ subject_index }}, {{ loop.index }})">
+                                        <input type="radio" name="q_{{ item.q.id }}" value="{{ opt.key }}" class="d-none">
+                                        <strong>{{ opt.key }}.</strong> {{ opt.text }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <hr>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="nav-map">
+                <h6 class="fw-bold mb-3">Question Navigator</h6>
+                {% for subject_name, items in exam_data.items() %}
+                <div class="question-grid subject-palette {% if not loop.first %}d-none{% endif %}" id="palette-{{ loop.index }}">
+                    {% for item in items %}
+                    <a href="javascript:void(0)" onclick="scrollToQuestion({{ loop.parent.index }}, {{ loop.index }})" 
+                       class="grid-btn" id="btn-{{ loop.parent.index }}-{{ loop.index }}">{{ loop.index }}</a>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+
+    <div class="calc-modal" id="calculator">
+        <input type="text" class="calc-display" id="calcDisplay" readonly>
+        <div class="calc-keys">
+            <button class="calc-btn btn-danger" onclick="calcClear()">C</button>
+            <button class="calc-btn btn-secondary" onclick="calcAppend('/')">/</button>
+            <button class="calc-btn btn-secondary" onclick="calcAppend('*')">*</button>
+            <button class="calc-btn btn-secondary" onclick="calcAppend('-')">-</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('7')">7</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('8')">8</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('9')">9</button>
+            <button class="calc-btn btn-secondary" onclick="calcAppend('+')">+</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('4')">4</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('5')">5</button>
+            <button class="calc-btn btn-light" onclick="calcAppend('6')">6</button>
+            <button class="calc-btn btn-success" onclick="calcSolve()">=</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSubjectIdx = 1;
+        function switchTab(index, btn) {
+            currentSubjectIdx = index;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active'));
+            document.getElementById(`content-${index}`).classList.add('show', 'active');
+            document.querySelectorAll('.subject-palette').forEach(p => p.classList.add('d-none'));
+            document.getElementById(`palette-${index}`).classList.remove('d-none');
+        }
+
+        function selectOption(inputName, value, card, subIdx, qIdx) {
+            const radio = card.querySelector('input');
+            radio.checked = true;
+            card.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            document.getElementById(`btn-${subIdx}-${qIdx}`).classList.add('answered');
+        }
+
+        function scrollToQuestion(subIdx, qIdx) {
+            const el = document.getElementById(`q-${subIdx}-${qIdx}`);
+            el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleCalc() {
+            const calc = document.getElementById('calculator');
+            calc.style.display = calc.style.display === 'block' ? 'none' : 'block';
+        }
+        function calcAppend(v) { document.getElementById('calcDisplay').value += v; }
+        function calcClear() { document.getElementById('calcDisplay').value = ''; }
+        function calcSolve() { try { document.getElementById('calcDisplay').value = eval(document.getElementById('calcDisplay').value); } catch { document.getElementById('calcDisplay').value = 'Error'; } }
+
+        function confirmSubmit() { if(confirm("Are you sure you want to submit?")) document.getElementById('examForm').submit(); }
+
+        // Timer Logic
+        let timeLeft = {{ exam.duration_minutes * 60 }};
+        const timerElem = document.getElementById('timer');
+        const countdown = setInterval(() => {
+            if (timeLeft <= 0) { clearInterval(countdown); document.getElementById('examForm').submit(); }
+            let h = Math.floor(timeLeft / 3600);
+            let m = Math.floor((timeLeft % 3600) / 60);
+            let s = timeLeft % 60;
+            timerElem.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            timeLeft--;
+        }, 1000);
+    </script>
+</body>
+</html>
