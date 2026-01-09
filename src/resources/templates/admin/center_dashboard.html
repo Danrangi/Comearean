@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card p-4 bg-success text-white border-0 shadow-sm">
+            <h3>Center Administration</h3>
+            <p class="mb-0">Center: {{ g.user.center.name }} | Admin: {{ g.user.username }}</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card p-3 shadow-sm mb-4">
+            <h5 class="fw-bold">Manual Student Entry</h5>
+            <hr>
+            <form action="{{ url_for('admin.add_student') }}" method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Student ID / Username</label>
+                    <input type="text" name="username" class="form-control" placeholder="e.g. STU001" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100 fw-bold">Register Student</button>
+            </form>
+        </div>
+
+        <div class="card p-3 shadow-sm border-primary">
+            <h5 class="fw-bold">Bulk Import</h5>
+            <p class="small text-muted">Use CSV to register multiple students at once.</p>
+            <button class="btn btn-outline-primary btn-sm w-100">Upload Student CSV</button>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-success">Active Student List</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td><strong>{{ student.username }}</strong></td>
+                            <td>
+                                {% if student.is_writing %}
+                                <span class="badge bg-warning">Writing...</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Idle</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="#" class="btn btn-sm btn-outline-info">Results</a>
+                                <button class="btn btn-sm btn-outline-danger">Reset</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if not students %}
+                <div class="text-center py-4 text-muted">No students registered yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

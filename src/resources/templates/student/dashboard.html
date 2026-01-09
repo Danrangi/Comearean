@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="dashboard-page-content py-5">
+    <div class="dashboard-container text-center">
+        <h1 class="fw-bold mb-2">Welcome to ExamArena</h1>
+        <p class="text-muted fs-5 mb-5">Select an examination body to begin your mock test.</p>
+        
+        <div class="row g-4 justify-content-center">
+            {% for exam in exams %}
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white fw-bold">{{ exam.name }}</div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            <i class="fas fa-clock"></i> {{ exam.duration_minutes // 60 }} Hours<br>
+                            <i class="fas fa-book"></i> {{ exam.required_subjects }} Subject(s) Required
+                        </p>
+                        <a href="{{ url_for('main.exam_setup', exam_id=exam.id) }}" class="btn btn-primary w-100">Prepare Test</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card p-3 bg-dark text-white mb-4">
+            <h5>Licensing Tool</h5>
+            <p class="small">Hardware ID: <code>{{ hwid }}</code></p>
+            <hr>
+            <p>Use the <code>generate_key.py</code> script with this ID to create center activation tokens.</p>
+        </div>
+        
+        <div class="card p-3 shadow-sm">
+            <h5>Create Center & Admin</h5>
+            <form action="{{ url_for('super_admin.add_center') }}" method="POST">
+                <input type="text" name="name" class="form-control mb-2" placeholder="Center Name" required>
+                <input type="text" name="location" class="form-control mb-2" placeholder="Location" required>
+                <hr>
+                <input type="text" name="admin_username" class="form-control mb-2" placeholder="Admin Username" required>
+                <input type="password" name="admin_password" class="form-control mb-2" placeholder="Admin Password" required>
+                <button type="submit" class="btn btn-primary w-100">Deploy Center</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Registered Centers</h5>
+                <a href="{{ url_for('admin.index') }}" class="btn btn-sm btn-warning">Manage Question Bank</a>
+            </div>
+            <table class="table">
+                <thead><tr><th>Center</th><th>Admin</th><th>Location</th></tr></thead>
+                <tbody>
+                    {% for c in centers %}
+                    <tr>
+                        <td>{{ c.name }}</td>
+                        <td>{% for u in c.users if u.role == 'centeradmin' %} {{ u.username }} {% endfor %}</td>
+                        <td>{{ c.location }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,35 +6,29 @@ class Center(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     users = db.relationship('User', backref='center', lazy=True)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    role = db.Column(db.String(20), default='student')
+    role = db.Column(db.String(20), default='student') # superadmin, centeradmin, student
     center_id = db.Column(db.Integer, db.ForeignKey('center.id'), nullable=True)
-    is_online = db.Column(db.Boolean, default=False)
-    current_session_id = db.Column(db.String(100))
+    
+    # Session tracking for Center Admin supervision
+    is_writing = db.Column(db.Boolean, default=False)
+    last_login = db.Column(db.DateTime)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-class Result(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    center_id = db.Column(db.Integer, db.ForeignKey('center.id'))
-    score = db.Column(db.Float)
-    total_questions = db.Column(db.Integer)
-    details = db.Column(db.JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False) # JAMB, WAEC, NECO
+    duration_minutes = db.Column(db.Integer, default=60)
+    required_subjects = db.Column(db.Integer, default=1) # JAMB=4, others=1
     subjects = db.relationship('Subject', backref='exam', lazy=True)
 
 class Subject(db.Model):
@@ -53,3 +47,12 @@ class Question(db.Model):
     correct_option = db.Column(db.String(1))
     explanation = db.Column(db.Text)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))
+
+class Result(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    center_id = db.Column(db.Integer, db.ForeignKey('center.id'))
+    exam_name = db.Column(db.String(50))
+    score = db.Column(db.Float)
+    total_questions = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
