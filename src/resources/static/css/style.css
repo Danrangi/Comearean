@@ -32,8 +32,9 @@ body {
 .bg-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(244, 247, 254, 0.85); /* Light overlay to blend image */
-    backdrop-filter: blur(10px);
+    /* UPDATE: Reduced opacity to 0.40 and blur to 5px */
+    background: rgba(244, 247, 254, 0.40); 
+    backdrop-filter: blur(-4px);
     z-index: -1;
 }
 
