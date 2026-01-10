@@ -1,64 +1,86 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row">
-    <div class="col-md-12 mb-4">
-        <div class="card p-4 bg-warning text-dark border-0 shadow-sm">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="fw-bold mb-1">Global Question Bank</h3>
-                    <p class="mb-0">Super Admin Mode: Manage Exam Subjects & Questions</p>
-                </div>
-                <a href="{{ url_for('super_admin.index') }}" class="btn btn-dark">Back to Licensing</a>
+    <div class="col-12 mb-4">
+        <h2 class="fw-bold text-dark">Question Bank Management</h2>
+        <p class="text-muted">Manage subjects and questions for JAMB, WAEC, and NECO.</p>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="fw-bold text-primary mb-0">Create New Subject</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.index') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase">Exam Category</label>
+                        <select name="exam_id" class="form-select" required>
+                            <option value="">Select Exam Type...</option>
+                            {% for exam in exams %}
+                            <option value="{{ exam.id }}">{{ exam.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase">Subject Title</label>
+                        <input type="text" name="subject_name" class="form-control" placeholder="e.g. English Language" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <i class="fas fa-plus-circle me-2"></i> Add Subject
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card p-3 shadow-sm">
-            <h5 class="fw-bold">Add Global Subject</h5>
-            <hr>
-            <form action="{{ url_for('admin.index') }}" method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Exam Type</label>
-                    <select name="exam_id" class="form-select" required>
-                        {% for exam in exams %}
-                        <option value="{{ exam.id }}">{{ exam.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Subject Name</label>
-                    <input type="text" name="subject_name" class="form-control" placeholder="e.g. Mathematics" required>
-                </div>
-                <button type="submit" class="btn btn-warning w-100 fw-bold">Create Subject</button>
-            </form>
-        </div>
-    </div>
-
     <div class="col-md-8">
-        <div class="card p-3 shadow-sm">
-            <h5 class="fw-bold">Existing Subjects</h5>
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Exam</th>
-                        <th>Subject</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sub in subjects %}
-                    <tr>
-                        <td><span class="badge bg-secondary">{{ sub.exam.name }}</span></td>
-                        <td><strong>{{ sub.name }}</strong></td>
-                        <td class="text-end">
-                            <a href="{{ url_for('admin.manage_questions', subject_id=sub.id) }}" class="btn btn-sm btn-info text-white">Questions</a>
-                            <a href="{{ url_for('admin.edit_subject', id=sub.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="fw-bold mb-0">Available Subjects</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Subject</th>
+                                <th>Exam</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sub in subjects %}
+                            <tr>
+                                <td class="ps-4 fw-bold">{{ sub.name }}</td>
+                                <td><span class="badge bg-secondary">{{ sub.exam.name }}</span></td>
+                                <td class="text-end pe-4">
+                                    <a href="{{ url_for('admin.manage_questions', subject_id=sub.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                        Questions <span class="badge bg-primary text-white ms-1">{{ sub.questions|length }}</span>
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_subject', id=sub.id) }}" class="btn btn-sm btn-outline-secondary me-1" title="Rename">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <form action="{{ url_for('admin.delete_subject', id=sub.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete {{ sub.name }} and all its questions?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center py-4 text-muted">No subjects found. Add one on the left.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
