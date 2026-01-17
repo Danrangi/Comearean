@@ -4,3 +4,5 @@ flask-wtf
 cryptography
 waitress
 python-dotenv
+weasyprint
+cryptography
