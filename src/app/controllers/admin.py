@@ -171,3 +171,27 @@ def delete_subject(id):
 def download_sample_csv():
     csv = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
     return Response(csv, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=sample.csv"})
+
+@bp.route('/exam/delete/<int:exam_id>', methods=['POST'])
+def delete_exam(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    try:
+        db.session.delete(exam)
+        db.session.commit()
+        flash(f'Exam "{exam.name}" deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Cannot delete exam. It may have associated results.', 'error')
+    return redirect(url_for('admin.admin_panel'))
+
+@bp.route('/exam/delete/<int:exam_id>', methods=['POST'])
+def delete_exam(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    try:
+        db.session.delete(exam)
+        db.session.commit()
+        flash(f'Exam "{exam.name}" deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Cannot delete exam. It may have associated results.', 'error')
+    return redirect(url_for('admin.admin_panel'))

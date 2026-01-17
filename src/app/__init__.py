@@ -1,55 +1,53 @@
 import os
 from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
-from .config import Config
+from cryptography.fernet import Fernet
 
 db = SQLAlchemy()
-csrf = CSRFProtect()
 
-def create_app():
-    app = Flask(__name__, 
-                template_folder='../resources/templates',
-                static_folder='../resources/static')
+def create_app(test_config=None):
+    app = Flask(__name__, instance_relative_config=True, template_folder='../resources/templates', static_folder='../resources/static')
     
-    app.config.from_object(Config)
-    
+    # Ensure instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
+
+    # Default Config
+    app.config.from_mapping(
+        SECRET_KEY='dev',
+        LICENSE_SECRET_KEY=Fernet.generate_key(), # In prod, this should be fixed!
+        SQLALCHEMY_DATABASE_URI='sqlite:///' + os.path.join(app.instance_path, 'exam_data.db'),
+    )
+
+    if test_config is None:
+        app.config.from_file('config.json', load=json.load, silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
     db.init_app(app)
-    csrf.init_app(app)
-
-    @app.before_request
-    def check_license():
-        if request.endpoint in ['license_expired', 'static', 'auth.login']:
-            return
-        from src.app.utils.license import verify_license
-        if app.config.get('SKIP_LICENSE', False):
-            return
-        
-        instance_dir = app.config.get('INSTANCE_DIR')
-        token_path = os.path.join(instance_dir, 'license.bin')
-        key_path = os.path.join(instance_dir, 'license.key')
-        
-        if not os.path.exists(key_path):
-            return redirect(url_for('license_expired'))
-        with open(key_path, 'r') as f:
-            key = f.read().strip()
-        valid, _ = verify_license(token_path, key)
-        if not valid:
-            return redirect(url_for('license_expired'))
-
-    @app.route('/license-expired')
-    def license_expired():
-        return "<h1>License Required</h1><p>Contact Super Admin for activation.</p>"
 
     # Register Blueprints
-    from src.app.controllers import auth, super_admin, admin, main
+    from .controllers import auth, admin, student, main, activation
     app.register_blueprint(auth.bp)
-    app.register_blueprint(super_admin.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(student.bp)
     app.register_blueprint(main.bp)
+    app.register_blueprint(activation.bp)
 
-    @app.route('/')
-    def root():
-        return redirect(url_for('auth.login'))
+    # -- THE LICENSE CHECK --
+    from .utils.license import verify_license
+    
+    @app.before_request
+    def check_license():
+        # Allow static files and activation page to load without license
+        if request.endpoint and ('static' in request.endpoint or 'activation' in request.endpoint):
+            return
+
+        status = verify_license()
+        if not status['valid']:
+            # Redirect to activation "popup" page if license fails
+            return redirect(url_for('activation.index'))
 
     return app
