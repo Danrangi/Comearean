@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam In Progress - {{ exam.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4318FF; --light: #F4F7FE; }
+        body { background: var(--light); height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        .war-room-header { height: 70px; background: white; border-bottom: 1px solid #ddd; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
+        .tab-btn { background: transparent; border: none; padding: 10px 20px; font-weight: 600; color: #aaa; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .timer-box { font-family: monospace; font-size: 1.5rem; font-weight: 700; color: #E02424; }
+        .war-room-body { display: flex; height: calc(100vh - 70px); }
+        .question-area { flex: 1; overflow-y: auto; padding: 40px; }
+        .nav-sidebar { width: 320px; background: white; border-left: 1px solid #ddd; overflow-y: auto; padding: 20px; }
+        .option-card { background: white; padding: 15px 20px; border: 2px solid #e0e0e0; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; }
+        .option-card:hover { background: #f0f0f0; }
+        .option-card.selected { border-color: var(--primary); background: #EEF2FF; color: var(--primary); font-weight: 600; }
+        .grid-btn { width: 100%; height: 40px; border: 1px solid #ddd; background: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 600; color: #555; text-decoration: none; }
+        .grid-btn.answered { background: var(--primary); color: white; border-color: var(--primary); }
+        .calc-modal { display: none; position: fixed; top: 80px; right: 340px; width: 260px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+    <form method="POST" action="{{ url_for('main.submit_exam') }}" id="examForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="exam_name" value="{{ exam.name }}">
+
+        <header class="war-room-header">
+            <div class="d-flex">
+                {% for subject_name in exam_data.keys() %}
+                <button type="button" class="tab-btn {% if loop.first %}active{% endif %}" onclick="switchTab({{ loop.index }}, this)">{{ subject_name }}</button>
+                {% endfor %}
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="timer-box" id="timer">00:00:00</div>
+                <button type="button" class="btn btn-light border" onclick="toggleCalc()"><i class="fas fa-calculator"></i></button>
+                <button type="button" class="btn btn-danger fw-bold px-4" data-bs-toggle="modal" data-bs-target="#submitModal">Submit</button>
+            </div>
+        </header>
+
+        <div class="war-room-body">
+            <div class="question-area">
+                <div class="tab-content">
+                    {% for subject_name, items in exam_data.items() %}
+                    {% set sub_idx = loop.index %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="content-{{ sub_idx }}">
+                        {% for item in items %}
+                        <div class="mb-5" id="q-{{ sub_idx }}-{{ loop.index }}">
+                            <h5 class="fw-bold mb-3"><span class="badge bg-secondary me-2">Q{{ loop.index }}</span> {{ item.q.text }}</h5>
+                            {% for opt in item.opts %}
+                            <div class="option-card" onclick="selectOption('q_{{ item.q.id }}', '{{ opt.key }}', this, {{ sub_idx }}, {{ loop.index }})">
+                                <input type="radio" name="q_{{ item.q.id }}" value="{{ opt.key }}" class="d-none">
+                                <span class="me-2">{{ opt.key }}.</span> {{ opt.text }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <hr class="my-5 text-muted">
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="nav-sidebar">
+                <h6 class="fw-bold mb-3 text-uppercase small text-muted">Question Navigator</h6>
+                {% for subject_name, items in exam_data.items() %}
+                {% set nav_sub_idx = loop.index %}
+                <div class="row g-2 subject-palette {% if not loop.first %}d-none{% endif %}" id="palette-{{ nav_sub_idx }}">
+                    {% for item in items %}
+                    <div class="col-3">
+                        <a href="javascript:void(0)" onclick="scrollToQ({{ nav_sub_idx }}, {{ loop.index }})" class="grid-btn" id="btn-{{ nav_sub_idx }}-{{ loop.index }}">{{ loop.index }}</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+
+    <div class="modal fade" id="submitModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg p-3">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Finish Exam?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <p class="mb-0 text-muted">Are you sure you want to submit? You cannot change your answers after this.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 fw-bold" onclick="document.getElementById('examForm').submit()">Yes, Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calc-modal card p-3" id="calculator">
+        <input type="text" id="calcDisplay" class="form-control mb-2 text-end fw-bold fs-5" readonly>
+        <div class="row g-1">
+            <div class="col-3"><button class="btn btn-sm btn-danger w-100" onclick="calcCl()">C</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-secondary w-100" onclick="calcIn('/')">/</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-secondary w-100" onclick="calcIn('*')">*</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-secondary w-100" onclick="calcIn('-')">-</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('7')">7</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('8')">8</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('9')">9</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-secondary w-100" onclick="calcIn('+')">+</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('4')">4</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('5')">5</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('6')">6</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-primary w-100" onclick="calcEq()">=</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('1')">1</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('2')">2</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('3')">3</button></div>
+            <div class="col-3"><button class="btn btn-sm btn-light w-100 border" onclick="calcIn('0')">0</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function switchTab(idx, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active'));
+            document.getElementById(`content-${idx}`).classList.add('show', 'active');
+            document.querySelectorAll('.subject-palette').forEach(p => p.classList.add('d-none'));
+            document.getElementById(`palette-${idx}`).classList.remove('d-none');
+        }
+        function selectOption(name, val, card, sIdx, qIdx) {
+            card.querySelector('input').checked = true;
+            card.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            document.getElementById(`btn-${sIdx}-${qIdx}`).classList.add('answered');
+        }
+        function scrollToQ(sIdx, qIdx) {
+            document.getElementById(`q-${sIdx}-${qIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        function toggleCalc() { const c = document.getElementById('calculator'); c.style.display = c.style.display === 'block' ? 'none' : 'block'; }
+        function calcIn(v) { document.getElementById('calcDisplay').value += v; }
+        function calcCl() { document.getElementById('calcDisplay').value = ''; }
+        function calcEq() { try { document.getElementById('calcDisplay').value = eval(document.getElementById('calcDisplay').value); } catch {} }
+
+        let time = {{ exam.duration_minutes * 60 }};
+        setInterval(() => {
+            if (time <= 0) document.getElementById('examForm').submit();
+            let h = Math.floor(time/3600), m = Math.floor((time%3600)/60), s = time%60;
+            document.getElementById('timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            time--;
+        }, 1000);
+    </script>
+</body>
+</html>

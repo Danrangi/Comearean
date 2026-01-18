@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container text-center py-5">
+    <div class="card shadow p-5">
+        <i class="fas fa-tools fa-5x text-warning mb-4"></i>
+        <h1 class="fw-bold">{{ feature }}</h1>
+        <p class="lead text-muted">This feature is currently under construction for our next offline update.</p>
+        <div class="mt-4">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Return to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

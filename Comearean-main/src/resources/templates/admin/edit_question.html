@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card p-4 shadow-sm">
+        <h3>Edit Question</h3>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Question Text</label>
+                <textarea name="question_text" class="form-control" rows="3" required>{{ question.text }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Option A</label>
+                    <input type="text" name="option_a" class="form-control" value="{{ question.option_a }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Option B</label>
+                    <input type="text" name="option_b" class="form-control" value="{{ question.option_b }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Option C</label>
+                    <input type="text" name="option_c" class="form-control" value="{{ question.option_c }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Option D</label>
+                    <input type="text" name="option_d" class="form-control" value="{{ question.option_d }}" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label>Correct Answer</label>
+                <select name="correct_answer" class="form-select" required>
+                    <option value="A" {% if question.correct_option == 'A' %}selected{% endif %}>A</option>
+                    <option value="B" {% if question.correct_option == 'B' %}selected{% endif %}>B</option>
+                    <option value="C" {% if question.correct_option == 'C' %}selected{% endif %}>C</option>
+                    <option value="D" {% if question.correct_option == 'D' %}selected{% endif %}>D</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Explanation</label>
+                <textarea name="explanation" class="form-control">{{ question.explanation }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Question</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
