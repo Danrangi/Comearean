@@ -4,3 +4,4 @@ flask-wtf
 cryptography
 waitress
 python-dotenv
+reportlab

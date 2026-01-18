@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-danger text-white text-center py-3">
+                <h4 class="mb-0 fw-bold"><i class="fas fa-lock me-2"></i>Software Activation</h4>
+            </div>
+            <div class="card-body p-4">
+                {% if error %}
+                <div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i> {{ error }}</div>
+                {% endif %}
+                <p class="text-muted text-center mb-4">
+                    This copy of <strong>ExamArena</strong> is locked. <br>
+                    Please contact the vendor with your System ID below to obtain an activation key.
+                </p>
+                <div class="mb-4 text-center">
+                    <label class="small fw-bold text-uppercase text-secondary">Your System ID</label>
+                    <div class="input-group mt-1">
+                        <input type="text" class="form-control text-center fw-bold fs-5 font-monospace bg-light" value="{{ hwid }}" readonly id="hwidBox">
+                        <button class="btn btn-outline-secondary" onclick="copyHWID()" type="button"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Enter Activation Key</label>
+                        <textarea name="activation_key" class="form-control font-monospace" rows="3" placeholder="Paste your key here..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2">ACTIVATE SOFTWARE</button>
+                </form>
+            </div>
+            <div class="card-footer bg-light text-center small text-muted">ExamArena Offline Secure Edition</div>
+        </div>
+    </div>
+</div>
+<script>
+function copyHWID() {
+    var copyText = document.getElementById("hwidBox");
+    copyText.select();
+    navigator.clipboard.writeText(copyText.value);
+    alert("System ID Copied: " + copyText.value);
+}
+</script>
+{% endblock %}
