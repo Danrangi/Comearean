@@ -15,7 +15,7 @@ class User(db.Model):
     role = db.Column(db.String(20), default='student') # superadmin, centeradmin, student
     center_id = db.Column(db.Integer, db.ForeignKey('center.id'), nullable=True)
     
-    # Session tracking for Center Admin supervision
+    # Session tracking
     is_writing = db.Column(db.Boolean, default=False)
     last_login = db.Column(db.DateTime)
 
@@ -26,9 +26,9 @@ class User(db.Model):
 
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False) # JAMB, WAEC, NECO
+    name = db.Column(db.String(100), nullable=False)
     duration_minutes = db.Column(db.Integer, default=60)
-    required_subjects = db.Column(db.Integer, default=1) # JAMB=4, others=1
+    required_subjects = db.Column(db.Integer, default=1)
     subjects = db.relationship('Subject', backref='exam', lazy=True)
 
 class Subject(db.Model):
@@ -56,3 +56,7 @@ class Result(db.Model):
     score = db.Column(db.Float)
     total_questions = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # --- THIS LINE FIXES THE ERROR ---
+    # It links the result back to the user so we can get the username
+    user = db.relationship('User', backref=db.backref('results', lazy=True))
