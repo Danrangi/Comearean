@@ -1,6 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, g, request, session, flash
+from flask import Blueprint, render_template, redirect, url_for, g, request, session, flash, send_file, Response
 from src.app.models import Exam, Subject, Question, Result, db
 from .auth import login_required
+import io
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
 
 bp = Blueprint('main', __name__)
 
@@ -8,7 +12,8 @@ bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     exams = Exam.query.all()
-    return render_template('student/dashboard.html', exams=exams)
+    history = Result.query.filter_by(user_id=g.user.id).order_by(Result.created_at.desc()).all()
+    return render_template('student/dashboard.html', exams=exams, history=history)
 
 @bp.route('/setup/<int:exam_id>')
 @login_required
@@ -22,65 +27,67 @@ def exam_setup(exam_id):
 def take_exam():
     exam_id = request.form.get('exam_id')
     selected_ids = request.form.getlist('subjects')
+    if not selected_ids:
+        flash("Please select at least one subject.", "warning")
+        return redirect(url_for('main.exam_setup', exam_id=exam_id))
     exam = Exam.query.get(exam_id)
-    
     g.user.is_writing = True
     db.session.commit()
-
     exam_data = {}
     for sid in selected_ids:
         sub = Subject.query.get(sid)
         qs = Question.query.filter_by(subject_id=sid).all()
         sub_items = [{'q': q, 'opts': [{'key':'A','text':q.option_a},{'key':'B','text':q.option_b},{'key':'C','text':q.option_c},{'key':'D','text':q.option_d}]} for q in qs]
         exam_data[sub.name] = sub_items
-
     return render_template('student/war_room.html', exam_data=exam_data, exam=exam)
 
 @bp.route('/submit-exam', methods=['POST'])
 @login_required
 def submit_exam():
-    score = 0
-    total = 0
-    results_list = []
-    
+    score = 0; total = 0; results_list = []
     for key, value in request.form.items():
         if key.startswith('q_'):
             total += 1
             q_id = int(key.split('_')[1])
             q = Question.query.get(q_id)
-            
+            if not q: continue
             is_correct = q.correct_option == value
-            if is_correct:
-                score += 1
-                
-            results_list.append({
-                'question_text': q.text,
-                'user_answer': value,
-                'correct_answer': q.correct_option,
-                'is_correct': is_correct,
-                'explanation': q.explanation,
-                'options': {'A': q.option_a, 'B': q.option_b, 'C': q.option_c, 'D': q.option_d}
-            })
-
-    # Save summary to DB
-    new_result = Result(user_id=g.user.id, center_id=g.user.center_id, 
-                        exam_name=request.form.get('exam_name'), 
-                        score=float(score), total_questions=total)
-    
+            if is_correct: score += 1
+            results_list.append({'question_text': q.text, 'user_answer': value, 'correct_answer': q.correct_option, 'is_correct': is_correct, 'explanation': q.explanation})
+    new_result = Result(user_id=g.user.id, center_id=g.user.center_id, exam_name=request.form.get('exam_name'), score=float(score), total_questions=total)
     g.user.is_writing = False
     db.session.add(new_result)
     db.session.commit()
-
-    # Pass detailed data to the template
-    results_data = {
-        'score': score,
-        'total_questions': total,
-        'subject_name': request.form.get('exam_name'),
-        'results_list': results_list
-    }
-    
+    results_data = {'id': new_result.id, 'score': score, 'total_questions': total, 'subject_name': request.form.get('exam_name'), 'results_list': results_list}
     return render_template('student/results.html', results=results_data)
 
 @bp.route('/ai-preview')
 def ai_preview():
     return render_template('student/under_construction.html', feature="AI Performance Analysis")
+
+@bp.route('/download-result/<int:result_id>')
+@login_required
+def download_result(result_id):
+    result = Result.query.get_or_404(result_id)
+    if result.user_id != g.user.id and g.user.role not in ['superadmin', 'centeradmin']: return "Unauthorized", 403
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    p.setFont("Helvetica-Bold", 24)
+    p.drawString(50, height - 50, "ExamArena Result Slip")
+    p.setFont("Helvetica", 12)
+    p.drawString(50, height - 80, f"Date: {result.created_at.strftime('%Y-%m-%d %H:%M')}")
+    p.drawString(50, height - 100, f"Candidate: {result.user.username}")
+    p.drawString(50, height - 120, f"Center ID: {result.center_id}")
+    p.line(50, height - 130, width - 50, height - 130)
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(50, height - 170, f"Exam: {result.exam_name}")
+    score_percent = (result.score / result.total_questions * 100) if result.total_questions > 0 else 0
+    p.drawString(50, height - 200, f"Score: {result.score} / {result.total_questions}")
+    p.setFont("Helvetica-Bold", 40)
+    if score_percent >= 50: p.setFillColor(colors.green); p.drawString(50, height - 260, "PASSED")
+    else: p.setFillColor(colors.red); p.drawString(50, height - 260, "FAILED")
+    p.setFillColor(colors.black); p.setFont("Helvetica", 10)
+    p.drawString(50, 50, "Generated by ExamArena CBT System. This slip is valid for official use.")
+    p.showPage(); p.save(); buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"Result_{result.user.username}_{result.id}.pdf", mimetype='application/pdf')
