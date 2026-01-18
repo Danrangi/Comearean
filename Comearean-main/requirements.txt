@@ -1,0 +1,6 @@
+flask
+flask-sqlalchemy
+flask-wtf
+cryptography
+waitress
+python-dotenv
