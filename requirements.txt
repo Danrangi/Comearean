@@ -7,3 +7,4 @@ python-dotenv
 weasyprint
 cryptography
 weasyprint
+flask-wtf
