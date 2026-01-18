@@ -1,58 +1,42 @@
-from datetime import datetime
 from src.app import db
-from werkzeug.security import generate_password_hash, check_password_hash
-
-class Center(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    location = db.Column(db.String(200))
-    users = db.relationship('User', backref='center', lazy=True)
+from datetime import datetime
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
-    role = db.Column(db.String(20), default='student') # superadmin, centeradmin, student
-    center_id = db.Column(db.Integer, db.ForeignKey('center.id'), nullable=True)
-    
-    # Session tracking for Center Admin supervision
-    is_writing = db.Column(db.Boolean, default=False)
-    last_login = db.Column(db.DateTime)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))  # <--- Correct field name
+    role = db.Column(db.String(20), default='student') # student, admin, super_admin
 
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False) # JAMB, WAEC, NECO
-    duration_minutes = db.Column(db.Integer, default=60)
-    required_subjects = db.Column(db.Integer, default=1) # JAMB=4, others=1
-    subjects = db.relationship('Subject', backref='exam', lazy=True)
+    name = db.Column(db.String(100), nullable=False)
+    subjects = db.relationship('Subject', backref='exam', cascade="all, delete-orphan")
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
-    questions = db.relationship('Question', backref='subject', lazy=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
+    questions = db.relationship('Question', backref='subject', cascade="all, delete-orphan")
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     option_a = db.Column(db.String(200))
     option_b = db.Column(db.String(200))
     option_c = db.Column(db.String(200))
     option_d = db.Column(db.String(200))
-    correct_option = db.Column(db.String(1))
-    explanation = db.Column(db.Text)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))
+    correct_answer = db.Column(db.String(1)) # A, B, C, D
 
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    center_id = db.Column(db.Integer, db.ForeignKey('center.id'))
-    exam_name = db.Column(db.String(50))
-    score = db.Column(db.Float)
-    total_questions = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
+    score = db.Column(db.Integer)
+    total_possible = db.Column(db.Integer)
+    date_taken = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Center(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
