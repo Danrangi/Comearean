@@ -1,0 +1,13 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from src.app import db, create_app
+from src.app.models import User
+
+app = create_app()
+with app.app_context():
+    user = User(username='admin', role='superadmin')
+    user.set_password('master123')
+    db.session.add(user)
+    db.session.commit()
+    print("[+] Super Admin created: admin / master123")
