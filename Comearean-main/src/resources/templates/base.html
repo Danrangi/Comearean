@@ -23,13 +23,16 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarMain">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    {% if g.user %}
                     <li class="nav-item">
-                        <span class="badge-role me-3">
+                        <a href="{{ url_for('auth.about') }}" class="nav-link fw-bold">About Us</a>
+                    </li>
+                    {% if g.user %}
+                    <li class="nav-item ms-3">
+                        <span class="badge-role">
                             <i class="fas fa-user-circle me-2"></i>{{ g.user.username }}
                         </span>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item ms-2">
                         <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-4">
                             Log Out
                         </a>

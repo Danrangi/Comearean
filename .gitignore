@@ -1,0 +1,25 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Database and Instance
+instance/
+*.db
+*.sqlite3
+
+# Build and Dist (Exe files)
+build/
+dist/
+*.spec
+*.exe
+
+# IDE settings
+.vscode/
+.idea/

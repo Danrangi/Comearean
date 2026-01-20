@@ -18,6 +18,10 @@ def load_logged_in_user():
     if user_id is None: g.user = None
     else: g.user = User.query.get(user_id)
 
+@bp.route('/about')
+def about():
+    return render_template('about.html')
+
 @bp.route('/activate', methods=['GET', 'POST'])
 def activate():
     hwid = get_hwid()

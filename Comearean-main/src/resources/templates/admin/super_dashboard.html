@@ -58,9 +58,26 @@
     <div class="card shadow-sm">
         <div class="card-header bg-white fw-bold">Authorized Centers</div>
         <div class="card-body p-0">
-            <table class="table table-striped mb-0">
-                <thead><tr><th>Center Name</th><th>Location</th><th>Registered Users</th><th>Status</th></tr></thead>
-                <tbody>{% for c in centers %}<tr><td>{{ c.name }}</td><td>{{ c.location }}</td><td>{{ c.users|length }}</td><td><span class="badge bg-success">Active</span></td></tr>{% else %}<tr><td colspan="4" class="text-center py-3 text-muted">No centers registered.</td></tr>{% endfor %}</tbody>
+            <table class="table table-striped mb-0 align-middle">
+                <thead><tr><th class="ps-4">Center Name</th><th>Location</th><th>Users</th><th>Status</th><th class="text-end pe-4">Actions</th></tr></thead>
+                <tbody>
+                    {% for c in centers %}
+                    <tr>
+                        <td class="ps-4 fw-bold">{{ c.name }}</td>
+                        <td>{{ c.location }}</td>
+                        <td>{{ c.users|length }}</td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td class="text-end pe-4">
+                            <form action="{{ url_for('super_admin.delete_center', id=c.id) }}" method="POST" onsubmit="return confirm('DELETE CENTER: {{ c.name }}?\nThis will remove the Center Admin and ALL student results associated with this center.\nThis action cannot be undone.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-sm btn-danger fw-bold">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-3 text-muted">No centers registered.</td></tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, g, flash
-from src.app.models import Center, User, Exam, Subject, Question, db
+from src.app.models import Center, User, Exam, Subject, Question, Result, db
 from src.app.utils.license import get_hwid
 from .auth import login_required
 
@@ -59,4 +59,19 @@ def add_center():
     db.session.add(admin)
     db.session.commit()
     flash(f"Center '{name}' and admin '{u}' created.", "success")
+    return redirect(url_for('super_admin.index'))
+
+@bp.route('/centers/delete/<int:id>', methods=['POST'])
+def delete_center(id):
+    center = Center.query.get_or_404(id)
+    # Delete all users (admin + students) associated with this center
+    users = User.query.filter_by(center_id=id).all()
+    for u in users:
+        # Delete results for these users first to enforce foreign keys
+        Result.query.filter_by(user_id=u.id).delete()
+        db.session.delete(u)
+    
+    db.session.delete(center)
+    db.session.commit()
+    flash(f"Center '{center.name}' and its Admin deleted.", "success")
     return redirect(url_for('super_admin.index'))

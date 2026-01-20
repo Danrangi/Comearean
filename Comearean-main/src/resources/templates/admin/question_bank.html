@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row">
-    <div class="col-12 mb-4">
-        <h2 class="fw-bold text-dark">Question Bank Management</h2>
-        <p class="text-muted">Manage subjects and questions for JAMB, WAEC, and NECO.</p>
+    <div class="col-12 mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold text-dark">Question Bank Management</h2>
+            <p class="text-muted">Manage subjects and questions for JAMB, WAEC, and NECO.</p>
+        </div>
+        <a href="{{ url_for('super_admin.index') }}" class="btn btn-secondary fw-bold">
+            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
     </div>
 
     <div class="col-md-4 mb-4">
