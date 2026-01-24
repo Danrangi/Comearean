@@ -9,10 +9,6 @@ jobs:
   build:
     runs-on: windows-latest
 
-    defaults:
-      run:
-        working-directory: Comearean-main/Comearean-main
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,15 +81,15 @@ jobs:
       - name: Package Setup Folder
         shell: powershell
         run: |
-          cd ..
           if (Test-Path "ExamArena_Setup") { Remove-Item "ExamArena_Setup" -Recurse -Force }
           New-Item -ItemType Directory -Path "ExamArena_Setup" | Out-Null
 
-          Copy-Item "Comearean-main/dist/ExamArena_Server.exe" "ExamArena_Setup/" -Force
-          Copy-Item "Comearean-main/dist/ExamArena_KeyGen.exe" "ExamArena_Setup/" -Force
+          # Copy artifacts from the dist folder in root
+          Copy-Item "dist/ExamArena_Server.exe" "ExamArena_Setup/" -Force
+          Copy-Item "dist/ExamArena_KeyGen.exe" "ExamArena_Setup/" -Force
 
-          if (Test-Path "Comearean-main/instance") {
-            Copy-Item "Comearean-main/instance" "ExamArena_Setup/instance" -Recurse -Force
+          if (Test-Path "instance") {
+            Copy-Item "instance" "ExamArena_Setup/instance" -Recurse -Force
           } else {
             New-Item -ItemType Directory -Path "ExamArena_Setup/instance" | Out-Null
           }
@@ -112,4 +108,4 @@ EXAM ARENA - OFFLINE CBT SOFTWARE
         uses: actions/upload-artifact@v4
         with:
           name: ExamArena_Windows_Setup
-          path: Comearean-main/ExamArena_Setup
+          path: ExamArena_Setup

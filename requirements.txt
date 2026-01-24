@@ -5,3 +5,5 @@ cryptography
 waitress
 python-dotenv
 reportlab
+pillow
+pyinstaller

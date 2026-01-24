@@ -1,15 +1,15 @@
 import os
 import sys
 import webbrowser
+import platform
 from threading import Timer
 from waitress import serve
+from src.app import create_app
 
 # Get the absolute path of the directory containing run.py
 root_path = os.path.dirname(os.path.abspath(__file__))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
-
-from src.app import create_app
 
 app = create_app()
 
