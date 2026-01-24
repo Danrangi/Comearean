@@ -29,27 +29,38 @@ jobs:
             pip install flask flask-sqlalchemy flask-wtf cryptography waitress reportlab pillow pyinstaller python-dotenv
           }
 
-      - name: Prepare Icon (fallback if missing)
+      - name: Download Offline Assets
+        shell: powershell
+        run: |
+          # Create vendor directories
+          New-Item -ItemType Directory -Path "src/resources/static/vendor/css" -Force | Out-Null
+          New-Item -ItemType Directory -Path "src/resources/static/vendor/js" -Force | Out-Null
+          
+          # Download Bootstrap CSS & JS
+          Invoke-WebRequest -Uri "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" -OutFile "src/resources/static/vendor/css/bootstrap.min.css"
+          Invoke-WebRequest -Uri "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" -OutFile "src/resources/static/vendor/js/bootstrap.bundle.min.js"
+          
+          # Download FontAwesome CSS (Icons might be limited offline without fonts, but layout won't break)
+          Invoke-WebRequest -Uri "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" -OutFile "src/resources/static/vendor/css/all.min.css"
+
+      - name: Prepare Icon
         shell: powershell
         run: |
           $iconPath = "src/resources/static/img/logo.ico"
           if (-not (Test-Path $iconPath)) {
-            Write-Host "Icon not found, generating fallback..."
             python -c "from PIL import Image; img=Image.new('RGB',(64,64),(0,128,0)); img.save(r'src/resources/static/img/logo.ico')"
           }
 
       - name: Ensure instance folder exists
         shell: powershell
         run: |
-          if (-not (Test-Path "instance")) {
-            New-Item -ItemType Directory -Path "instance" | Out-Null
-          }
+          if (-not (Test-Path "instance")) { New-Item -ItemType Directory -Path "instance" | Out-Null }
 
       - name: Init DB + Seed
         shell: powershell
         run: |
-          if (Test-Path "init_db.py") { python init_db.py } else { Write-Host "init_db.py not found, skipping" }
-          if (Test-Path "seed_exam_rules.py") { python seed_exam_rules.py } else { Write-Host "seed_exam_rules.py not found, skipping" }
+          if (Test-Path "init_db.py") { python init_db.py }
+          if (Test-Path "seed_exam_rules.py") { python seed_exam_rules.py }
 
       - name: Create Super Admin
         shell: powershell
@@ -57,7 +68,7 @@ jobs:
           SUPER_USER: "CExamArena"
           SUPER_PASS: "CExamArena@2026"
         run: |
-          if (Test-Path "create_superadmin.py") { python create_superadmin.py } else { Write-Host "create_superadmin.py not found, skipping" }
+          if (Test-Path "create_superadmin.py") { python create_superadmin.py }
 
       - name: Build Server EXE
         shell: powershell
@@ -87,18 +98,11 @@ jobs:
           if (Test-Path "ExamArena_Setup") { Remove-Item "ExamArena_Setup" -Recurse -Force }
           New-Item -ItemType Directory -Path "ExamArena_Setup" | Out-Null
 
-          # Copy artifacts from the dist folder
           Copy-Item "dist/ExamArena_Server.exe" "ExamArena_Setup/" -Force
           Copy-Item "dist/ExamArena_KeyGen.exe" "ExamArena_Setup/" -Force
+          if (Test-Path "instance") { Copy-Item "instance" "ExamArena_Setup/instance" -Recurse -Force }
 
-          if (Test-Path "instance") {
-            Copy-Item "instance" "ExamArena_Setup/instance" -Recurse -Force
-          } else {
-            New-Item -ItemType Directory -Path "ExamArena_Setup/instance" | Out-Null
-          }
-
-          # SAFE METHOD: Using newline characters instead of Here-String to avoid YAML errors
-          $text = "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1) Extract folder to: C:\ExamArena\`r`n2) Run: ExamArena_Server.exe`r`n3) Login:`r`n   User: CExamArena`r`n   Pass: CExamArena@2026"
+          $text = "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1) Extract to C:\ExamArena\`r`n2) Run ExamArena_Server.exe`r`n3) Login:`r`n   User: CExamArena`r`n   Pass: CExamArena@2026"
           Set-Content -Path "ExamArena_Setup/README.txt" -Value $text
 
       - name: Upload Artifact

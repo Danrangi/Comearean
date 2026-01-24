@@ -12,10 +12,26 @@ def restrict_to_local_server():
 
 @bp.route('/')
 def index():
-    centers = Center.query.all()
-    exams = Exam.query.all()
-    hwid = get_hwid()
-    return render_template('admin/super_dashboard.html', centers=centers, exams=exams, hwid=hwid)
+    try:
+        centers = Center.query.all()
+        exams = Exam.query.all()
+        # SAFE HWID CHECK: Prevents crash if WMI fails on lab PC
+        try:
+            hwid = get_hwid()
+        except Exception:
+            hwid = "Unavailable"
+            
+        return render_template('admin/super_dashboard.html', centers=centers, exams=exams, hwid=hwid)
+    except Exception as e:
+        # EMERGENCY DEBUG: Show the error on screen instead of 500
+        return f"""
+        <div style="padding:20px; font-family:sans-serif; background:#ffe6e6; border:1px solid red; color:red;">
+            <h1>System Error</h1>
+            <p>Could not load dashboard.</p>
+            <pre>{str(e)}</pre>
+            <p><a href="/">Go Back</a></p>
+        </div>
+        """, 500
 
 @bp.route('/exam/add', methods=['POST'])
 def add_exam():
@@ -64,13 +80,10 @@ def add_center():
 @bp.route('/centers/delete/<int:id>', methods=['POST'])
 def delete_center(id):
     center = Center.query.get_or_404(id)
-    # Delete all users (admin + students) associated with this center
     users = User.query.filter_by(center_id=id).all()
     for u in users:
-        # Delete results for these users first to enforce foreign keys
         Result.query.filter_by(user_id=u.id).delete()
         db.session.delete(u)
-    
     db.session.delete(center)
     db.session.commit()
     flash(f"Center '{center.name}' and its Admin deleted.", "success")
