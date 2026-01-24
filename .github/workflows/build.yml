@@ -2,69 +2,114 @@ name: Build ExamArena Windows App
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
 
+    defaults:
+      run:
+        working-directory: Comearean-main/Comearean-main
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install Dependencies
-      run: |
-        pip install flask flask-sqlalchemy flask-wtf cryptography waitress reportlab pillow pyinstaller
-        pip install python-dotenv
+      - name: Install Dependencies
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          if (Test-Path "requirements.txt") {
+            pip install -r requirements.txt
+          } else {
+            pip install flask flask-sqlalchemy flask-wtf cryptography waitress reportlab pillow pyinstaller python-dotenv
+          }
 
-    - name: Ensure Icon Exists (Convert PNG to ICO if missing)
-      run: |
-        python -c "from PIL import Image; import os; img = Image.open('src/resources/static/img/logo.png'); img.save('src/resources/static/img/logo.ico') if not os.path.exists('src/resources/static/img/logo.ico') else None"
+      - name: Prepare Icon (fallback if missing)
+        shell: powershell
+        run: |
+          $iconPath = "src/resources/static/img/logo.ico"
+          if (-not (Test-Path $iconPath)) {
+            Write-Host "Icon not found, generating fallback..."
+            python -c "from PIL import Image; img=Image.new('RGB',(64,64),(0,128,0)); img.save(r'src/resources/static/img/logo.ico')"
+          }
 
-    - name: Initialize Database
-      run: |
-        # Initialize the DB structure
-        python init_db.py
+      - name: Ensure instance folder exists
+        shell: powershell
+        run: |
+          if (-not (Test-Path "instance")) {
+            New-Item -ItemType Directory -Path "instance" | Out-Null
+          }
 
-    - name: Create Super Admin (Auto-Script)
-      run: |
-        # We create a temporary script to insert your user securely
-        echo "Creating Admin..."
-        python -c "from src.app import create_app, db; from src.app.models import User; app = create_app(); ctx = app.app_context(); ctx.push(); db.create_all(); User.query.delete(); admin = User(username='CExamArena', role='superadmin'); admin.set_password('CExamArena@2026'); db.session.add(admin); db.session.commit(); print('Admin Created Successfully');"
+      - name: Init DB + Seed
+        shell: powershell
+        run: |
+          if (Test-Path "init_db.py") { python init_db.py } else { Write-Host "init_db.py not found, skipping" }
+          if (Test-Path "seed_exam_rules.py") { python seed_exam_rules.py } else { Write-Host "seed_exam_rules.py not found, skipping" }
 
-    - name: Seed Exam Rules (JAMB/WAEC)
-      run: |
-        python seed_exam_rules.py
+      - name: Create Super Admin
+        shell: powershell
+        run: |
+          if (Test-Path "create_superadmin.py") { python create_superadmin.py } else { Write-Host "create_superadmin.py not found, skipping" }
 
-    - name: Build Server EXE (With Icon & Assets)
-      run: |
-        pyinstaller --noconsole --onefile --name "ExamArena_Server" --icon "src/resources/static/img/logo.ico" --add-data "src/resources;src/resources" run.py
+      - name: Build Server EXE
+        shell: powershell
+        run: |
+          pyinstaller --noconsole --onefile --clean `
+            --name "ExamArena_Server" `
+            --icon "src/resources/static/img/logo.ico" `
+            --add-data "src/resources;src/resources" `
+            --add-data "instance;instance" `
+            --collect-all flask `
+            --collect-all flask_sqlalchemy `
+            --collect-all flask_wtf `
+            --collect-all cryptography `
+            run.py
 
-    - name: Build KeyGen EXE
-      run: |
-        pyinstaller --noconsole --onefile --name "ExamArena_KeyGen" --icon "src/resources/static/img/logo.ico" key_generator.py
+      - name: Build KeyGen EXE
+        shell: powershell
+        run: |
+          pyinstaller --noconsole --onefile --clean `
+            --name "ExamArena_KeyGen" `
+            --icon "src/resources/static/img/logo.ico" `
+            key_generator.py
 
-    - name: Create README
-      shell: powershell
-      run: |
-        Set-Content -Path README.txt -Value "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1. Extract this folder to C: drive.`r`n2. Run ExamArena_Server.exe.`r`n3. Login with User: CExamArena | Pass: CExamArena@2026`r`n`r`nSUPPORT: 0808888888888"
+      - name: Package Setup Folder
+        shell: powershell
+        run: |
+          cd ..
+          if (Test-Path "ExamArena_Setup") { Remove-Item "ExamArena_Setup" -Recurse -Force }
+          New-Item -ItemType Directory -Path "ExamArena_Setup" | Out-Null
 
-    - name: Package for Distribution
-      run: |
-        mkdir ExamArena_Setup
-        copy dist\ExamArena_Server.exe ExamArena_Setup\
-        copy README.txt ExamArena_Setup\
-        # IMPORTANT: Copy the instance folder which contains the Admin/DB
-        xcopy instance ExamArena_Setup\instance /E /I
+          Copy-Item "Comearean-main/dist/ExamArena_Server.exe" "ExamArena_Setup/" -Force
+          Copy-Item "Comearean-main/dist/ExamArena_KeyGen.exe" "ExamArena_Setup/" -Force
 
-    - name: Upload Final Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ExamArena_Windows_Setup
-        path: ExamArena_Setup/
+          if (Test-Path "Comearean-main/instance") {
+            Copy-Item "Comearean-main/instance" "ExamArena_Setup/instance" -Recurse -Force
+          } else {
+            New-Item -ItemType Directory -Path "ExamArena_Setup/instance" | Out-Null
+          }
+
+          Set-Content -Path "ExamArena_Setup/README.txt" -Value @"
+EXAM ARENA - OFFLINE CBT SOFTWARE
+-----------------------------------
+1) Extract folder to: C:\ExamArena\
+2) Run: ExamArena_Server.exe
+3) Login:
+   User: CExamArena
+   Pass: CExamArena@2026
+"@
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExamArena_Windows_Setup
+          path: Comearean-main/ExamArena_Setup
