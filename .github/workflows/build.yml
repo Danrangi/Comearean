@@ -2,68 +2,72 @@ name: Build ExamArena Windows App
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
+    env:
+      PYTHONPATH: .  # <--- THIS FIXES THE "MODULE NOT FOUND" ERROR
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.11' 
 
     - name: Install Dependencies
       run: |
-        pip install flask flask-sqlalchemy flask-wtf cryptography waitress reportlab pillow pyinstaller
-        pip install python-dotenv
+        python -m pip install --upgrade pip
+        pip install flask flask-sqlalchemy flask-wtf cryptography waitress reportlab pillow pyinstaller python-dotenv
 
-    - name: Ensure Icon Exists (Convert PNG to ICO if missing)
+    - name: Prepare Icon (Safe Mode)
+      shell: powershell
       run: |
-        python -c "from PIL import Image; import os; img = Image.open('src/resources/static/img/logo.png'); img.save('src/resources/static/img/logo.ico') if not os.path.exists('src/resources/static/img/logo.ico') else None"
+        # Checks if logo exists, if not creates a dummy one so build doesn't fail
+        if (-not (Test-Path "src/resources/static/img/logo.ico")) {
+            echo "Icon not found, generating fallback..."
+            python -c "from PIL import Image; img = Image.new('RGB', (64, 64), color = 'green'); img.save('src/resources/static/img/logo.ico')"
+        }
 
-    - name: Initialize Database
+    - name: Setup Database & Admin
       run: |
-        # Initialize the DB structure
+        # 1. Initialize DB
         python init_db.py
-
-    - name: Create Super Admin (Auto-Script)
-      run: |
-        # We create a temporary script to insert your user securely
-        echo "Creating Admin..."
-        python -c "from src.app import create_app, db; from src.app.models import User; app = create_app(); ctx = app.app_context(); ctx.push(); db.create_all(); User.query.delete(); admin = User(username='CExamArena', role='superadmin'); admin.set_password('CExamArena@2026'); db.session.add(admin); db.session.commit(); print('Admin Created Successfully');"
-
-    - name: Seed Exam Rules (JAMB/WAEC)
-      run: |
+        
+        # 2. Create Super Admin (CExamArena / CExamArena@2026)
+        python -c "from src.app import create_app, db; from src.app.models import User; app = create_app(); ctx = app.app_context(); ctx.push(); db.create_all(); User.query.filter_by(username='CExamArena').delete(); admin = User(username='CExamArena', role='superadmin'); admin.set_password('CExamArena@2026'); db.session.add(admin); db.session.commit(); print('Admin Created');"
+        
+        # 3. Seed JAMB/WAEC Rules
         python seed_exam_rules.py
 
-    - name: Build Server EXE (With Icon & Assets)
+    - name: Build Server EXE
       run: |
+        # We use the updated path: src/resources
         pyinstaller --noconsole --onefile --name "ExamArena_Server" --icon "src/resources/static/img/logo.ico" --add-data "src/resources;src/resources" run.py
 
     - name: Build KeyGen EXE
       run: |
         pyinstaller --noconsole --onefile --name "ExamArena_KeyGen" --icon "src/resources/static/img/logo.ico" key_generator.py
 
-    - name: Create README
+    - name: Create README and Package
       shell: powershell
       run: |
+        # Create Instructions
         Set-Content -Path README.txt -Value "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1. Extract this folder to C: drive.`r`n2. Run ExamArena_Server.exe.`r`n3. Login with User: CExamArena | Pass: CExamArena@2026`r`n`r`nSUPPORT: 0808888888888"
-
-    - name: Package for Distribution
-      run: |
+        
+        # Organize Files
         mkdir ExamArena_Setup
         copy dist\ExamArena_Server.exe ExamArena_Setup\
         copy README.txt ExamArena_Setup\
-        # IMPORTANT: Copy the instance folder which contains the Admin/DB
+        
+        # CRITICAL: Copy the folder with the Database we just created
         xcopy instance ExamArena_Setup\instance /E /I
 
-    - name: Upload Final Artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ExamArena_Windows_Setup
