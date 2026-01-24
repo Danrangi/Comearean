@@ -1,20 +1,40 @@
 import os
 import sys
-# We removed getpass so you can see what you type
+
+# Ensure src module can be found
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from src.app import db, create_app
 from src.app.models import User
 
 app = create_app()
+
+def get_input_or_default(prompt, default_value):
+    """Try to get input, but return default if running in CI/Non-interactive mode"""
+    try:
+        val = input(prompt).strip()
+        return val if val else default_value
+    except EOFError:
+        # This block catches the error in GitHub Actions
+        print(f"[*] Non-interactive mode detected. Using default: {default_value}")
+        return default_value
+
 with app.app_context():
     print("--- Create or Update Super Admin ---")
-    username = input("Enter Username (default: admin): ").strip() or "admin"
     
-    # VISIBLE INPUT VERSION
+    # 1. Get Username (Default to CExamArena for the build)
+    username = get_input_or_default("Enter Username (default: CExamArena): ", "CExamArena")
+    
+    # 2. Get Password (Default to CExamArena@2026 for the build)
     print("NOTE: Password will be visible as you type.")
-    password = input(f"Enter New Password for '{username}': ").strip()
-    confirm = input("Confirm Password: ").strip()
+    password = get_input_or_default(f"Enter New Password for '{username}': ", "CExamArena@2026")
     
+    # 3. Confirm Password (logic handled automatically in non-interactive)
+    try:
+        confirm = input("Confirm Password: ").strip()
+    except EOFError:
+        confirm = password
+
     if password != confirm:
         print("[-] Passwords do not match!")
         sys.exit(1)
@@ -37,4 +57,4 @@ with app.app_context():
         print(f"[+] Created new Super Admin '{username}'.")
 
     db.session.commit()
-    print("[SUCCESS] You can now log in.")
+    print("[SUCCESS] Super Admin ready.")
