@@ -84,7 +84,7 @@ jobs:
           if (Test-Path "ExamArena_Setup") { Remove-Item "ExamArena_Setup" -Recurse -Force }
           New-Item -ItemType Directory -Path "ExamArena_Setup" | Out-Null
 
-          # Copy artifacts from the dist folder in root
+          # Copy artifacts from the dist folder
           Copy-Item "dist/ExamArena_Server.exe" "ExamArena_Setup/" -Force
           Copy-Item "dist/ExamArena_KeyGen.exe" "ExamArena_Setup/" -Force
 
@@ -94,15 +94,9 @@ jobs:
             New-Item -ItemType Directory -Path "ExamArena_Setup/instance" | Out-Null
           }
 
-          Set-Content -Path "ExamArena_Setup/README.txt" -Value @"
-EXAM ARENA - OFFLINE CBT SOFTWARE
------------------------------------
-1) Extract folder to: C:\ExamArena\
-2) Run: ExamArena_Server.exe
-3) Login:
-   User: CExamArena
-   Pass: CExamArena@2026
-"@
+          # SAFE METHOD: Using newline characters instead of Here-String
+          $text = "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1) Extract folder to: C:\ExamArena\`r`n2) Run: ExamArena_Server.exe`r`n3) Login:`r`n   User: CExamArena`r`n   Pass: CExamArena@2026"
+          Set-Content -Path "ExamArena_Setup/README.txt" -Value $text
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
