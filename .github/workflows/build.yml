@@ -53,6 +53,9 @@ jobs:
 
       - name: Create Super Admin
         shell: powershell
+        env:
+          SUPER_USER: "CExamArena"
+          SUPER_PASS: "CExamArena@2026"
         run: |
           if (Test-Path "create_superadmin.py") { python create_superadmin.py } else { Write-Host "create_superadmin.py not found, skipping" }
 
@@ -94,7 +97,7 @@ jobs:
             New-Item -ItemType Directory -Path "ExamArena_Setup/instance" | Out-Null
           }
 
-          # SAFE METHOD: Using newline characters instead of Here-String
+          # SAFE METHOD: Using newline characters instead of Here-String to avoid YAML errors
           $text = "EXAM ARENA - OFFLINE CBT SOFTWARE`r`n-----------------------------------`r`n1) Extract folder to: C:\ExamArena\`r`n2) Run: ExamArena_Server.exe`r`n3) Login:`r`n   User: CExamArena`r`n   Pass: CExamArena@2026"
           Set-Content -Path "ExamArena_Setup/README.txt" -Value $text
 
