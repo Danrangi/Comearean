@@ -36,9 +36,12 @@ csrf = CSRFProtect()
 def create_app():
     instance_path = _resolve_instance_path()
     os.makedirs(instance_path, exist_ok=True)
+
     instance_path = _resolve_instance_path()
+
     os.makedirs(instance_path, exist_ok=True)
 
+    
     app = Flask(
         __name__,
         instance_path=instance_path,
