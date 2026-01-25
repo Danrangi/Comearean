@@ -33,6 +33,37 @@ from .config import Config
 db = SQLAlchemy()
 csrf = CSRFProtect()
 
+def _bootstrap_db(app):
+    """
+    Make packaged/offline runs safe:
+    - create DB tables if missing
+    - ensure default superadmin exists
+    """
+    try:
+        from src.app import db
+        from src.app.models import User
+
+        with app.app_context():
+            db.create_all()
+
+            username = "CExamArena"
+            password = "CExamArena@2026"
+
+            u = User.query.filter_by(username=username).first()
+            if not u:
+                u = User(username=username, role="superadmin")
+                if hasattr(u, "set_password"):
+                    u.set_password(password)
+                else:
+                    u.password_hash = password
+                db.session.add(u)
+                db.session.commit()
+
+    except Exception as e:
+        # don't stop server; just print for logs/console
+        print("[BOOT] bootstrap warning:", e)
+
+
 def create_app():
     instance_path = _resolve_instance_path()
     os.makedirs(instance_path, exist_ok=True)
