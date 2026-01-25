@@ -1,3 +1,29 @@
+
+def _resolve_instance_path():
+    # When bundled (PyInstaller), write instance/ next to the EXE so DB/logs persist
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+        return os.path.join(base, "instance")
+    # Normal dev run: use project instance folder
+    return os.path.join(os.getcwd(), "instance")
+
+def _setup_file_logging(instance_path):
+    os.makedirs(os.path.join(instance_path, "logs"), exist_ok=True)
+    log_file = os.path.join(instance_path, "logs", "server.log")
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8"),
+            logging.StreamHandler()
+        ],
+    )
+    logging.getLogger("werkzeug").setLevel(logging.INFO)
+    return log_file
+
+import logging
+import sys
 import os
 from flask import Flask, redirect, url_for, request, session, g
 from flask_sqlalchemy import SQLAlchemy
