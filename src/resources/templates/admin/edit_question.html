@@ -3,7 +3,7 @@
 <div class="container mt-5">
     <div class="card p-4 shadow-sm">
         <h3>Edit Question</h3>
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label">Question Text</label>
                 <textarea name="question_text" class="form-control" rows="3" required>{{ question.text }}</textarea>
@@ -39,6 +39,22 @@
                 <label>Explanation</label>
                 <textarea name="explanation" class="form-control">{{ question.explanation }}</textarea>
             </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Question Diagram/Image</label>
+                {% if question.image_path %}
+                    <div class="mb-2">
+                        <img src="{{ url_for('main.uploads', filename=question.image_path) }}" alt="Diagram" style="max-width:320px; max-height:220px;" class="rounded border">
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="removeImage">
+                        <label class="form-check-label" for="removeImage">Remove current image</label>
+                    </div>
+                {% endif %}
+                <input type="file" name="question_image" class="form-control" accept="image/*">
+                <div class="form-text">Upload a new image to replace the current one.</div>
+            </div>
+
             <button type="submit" class="btn btn-primary">Update Question</button>
         </form>
     </div>

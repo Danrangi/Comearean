@@ -46,6 +46,7 @@ class Question(db.Model):
     option_d = db.Column(db.String(200))
     correct_option = db.Column(db.String(1))
     explanation = db.Column(db.Text)
+    image_path = db.Column(db.String(300))  # e.g. uploads/questions/diagram.png
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))
 
 class Result(db.Model):
