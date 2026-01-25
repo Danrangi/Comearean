@@ -34,9 +34,11 @@ db = SQLAlchemy()
 csrf = CSRFProtect()
 
 def create_app():
-    app = Flask(__name__, template_folder='../resources/templates', static_folder='../resources/static')
+    instance_path = _resolve_instance_path()\n    os.makedirs(instance_path, exist_ok=True)\n    app = Flask(__name__, instance_path=instance_path, template_folder='../resources/templates', static_folder='../resources/static')
     app.config.from_object(Config)
     db.init_app(app)
+
+    _bootstrap_db(app)
     csrf.init_app(app)
 
     from src.app.utils.license import verify_license
