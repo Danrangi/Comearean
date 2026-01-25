@@ -33,6 +33,12 @@ jobs:
             --add-data "src\resources;src\resources" `
             run.py
 
+
+      - name: Copy launcher BAT
+        shell: pwsh
+        run: |
+          Copy-Item Start_ExamArena.bat dist/ExamArenaServer/
+
       - name: Upload artifact (folder build)
         uses: actions/upload-artifact@v4
         with:
