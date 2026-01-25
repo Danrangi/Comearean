@@ -7,8 +7,23 @@ import sys
 import os
 
 # --- CONFIGURATION ---
-# MUST MATCH src/app/utils/license.py EXACTLY
-MASTER_KEY = b'LSUKxlGQMyOXdaFBnqr9Ne8AAbAKv3YFrGewFhghLEY=' 
+# Must match the server app key. You can override at runtime with:
+#   set COMEAREAN_MASTER_KEY=...   (Windows CMD)
+#   export COMEAREAN_MASTER_KEY=... (Linux/macOS)
+_DEFAULT_MASTER_KEY = b"LSUKxlGQMyOXdaFBnqr9Ne8AAbAKv3YFrGewFhghLEY="
+
+def _get_master_key() -> bytes:
+    env_key = os.getenv("COMEAREAN_MASTER_KEY", "").strip()
+    if not env_key:
+        return _DEFAULT_MASTER_KEY
+    key_bytes = env_key.encode("utf-8")
+    try:
+        Fernet(key_bytes)  # validate format
+        return key_bytes
+    except Exception:
+        return _DEFAULT_MASTER_KEY
+
+MASTER_KEY = _get_master_key()
 
 class KeyGeneratorApp:
     def __init__(self, root):

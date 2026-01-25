@@ -22,3 +22,15 @@ dist/
 # IDE
 .vscode/
 .idea/
+
+# App-local instance (license storage)
+src/app/instance/
+license.dat
+
+# Local helper scripts
+_step*.sh
+_*.sh
+
+# Local backups
+*.bak
+*.bak_*
