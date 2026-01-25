@@ -1,9 +1,40 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, Response, current_app
 from src.app import db
 from src.app.models import Exam, Subject, Question, User, Result
+from werkzeug.utils import secure_filename
 import csv, io
+import os
+import uuid
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+def _save_question_image(file_storage):
+    """Save uploaded image under instance/uploads/questions and return relative path or None."""
+    if not file_storage or not getattr(file_storage, "filename", ""):
+        return None
+
+    filename = secure_filename(file_storage.filename)
+    if not filename:
+        return None
+
+    # Basic extension allowlist (diagrams/photos)
+    allowed = {".png", ".jpg", ".jpeg", ".webp"}
+    ext = os.path.splitext(filename.lower())[1]
+    if ext not in allowed:
+        return None
+
+    # Ensure folder exists
+    upload_dir = os.path.join(current_app.instance_path, "uploads", "questions")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Unique name to avoid collisions
+    unique = f"{uuid.uuid4().hex}{ext}"
+    save_path = os.path.join(upload_dir, unique)
+    file_storage.save(save_path)
+
+    # Store relative path (served via /uploads/<path>)
+    return os.path.join("uploads", "questions", unique).replace("\\", "/")
+
 
 @bp.before_request
 def restrict_access():
@@ -135,6 +166,12 @@ def edit_question(id):
         q.option_d = request.form['option_d']
         q.correct_option = request.form['correct_answer']
         q.explanation = request.form['explanation']
+        # Image replace/remove
+        if request.form.get('remove_image') == '1':
+            q.image_path = None
+        new_img = _save_question_image(request.files.get('question_image'))
+        if new_img:
+            q.image_path = new_img
         db.session.commit()
         return redirect(url_for('admin.manage_questions', subject_id=q.subject_id))
     return render_template('admin/edit_question.html', question=q)
