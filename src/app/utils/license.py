@@ -40,10 +40,15 @@ def get_hwid() -> str:
 
     try:
         if system == "Windows":
-            cmd = "wmic diskdrive get serialnumber"
-            raw = subprocess.check_output(cmd, shell=True).decode(errors="ignore").splitlines()
-            candidates = [x.strip() for x in raw[1:] if x.strip()]
-            raw_id = candidates[0] if candidates else platform.node()
+            # Prefer PowerShell (WMIC is removed on some newer Windows builds)
+            try:
+                cmd = 'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystemProduct).UUID"'
+                raw_id = subprocess.check_output(cmd, shell=True).decode(errors="ignore").strip()
+                if not raw_id:
+                    raise Exception("Empty UUID")
+            except Exception:
+                # Fallbacks
+                raw_id = platform.node()
         elif system == "Linux":
             if os.path.exists("/etc/machine-id"):
                 with open("/etc/machine-id", "r", encoding="utf-8", errors="ignore") as f:
