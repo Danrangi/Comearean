@@ -102,14 +102,15 @@ def create_app():
     app.logger.info(f"[BOOT] Logging to: {log_file}")
     app.logger.info(f"[BOOT] Instance path: {instance_path}")
 
-    # License gate
+    # License gate (IMPORTANT: use instance_path so EXE restarts read same license file)
     from src.app.utils.license import verify_license
 
     @app.before_request
     def check_license_gate():
-        if request.endpoint in ["auth.activate", "static", "auth.login"]:
+        if request.endpoint in ["auth.activate", "static", "auth.login", "auth.logout"]:
             return
-        is_valid, _ = verify_license(app.root_path)
+
+        is_valid, _ = verify_license(app.instance_path)
         if not is_valid:
             return redirect(url_for("auth.activate"))
 
