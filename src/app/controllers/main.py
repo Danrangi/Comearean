@@ -1,13 +1,20 @@
-from flask import Blueprint, render_template, redirect, url_for, g, request, session, flash, send_file, Response, current_app
+from flask import Blueprint, render_template, redirect, url_for, g, request, session, flash, send_file, Response, send_from_directory, current_app, current_app
 from src.app.models import Exam, Subject, Question, Result, db
 from .auth import login_required
 import io
+import random
 import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
 bp = Blueprint('main', __name__)
+
+@bp.route('/uploads/<path:filename>')
+@login_required
+def uploads(filename):
+    # Files are stored under instance/uploads/...
+    return send_from_directory(current_app.instance_path, filename)
 
 @bp.route('/dashboard')
 @login_required
@@ -38,7 +45,21 @@ def take_exam():
     for sid in selected_ids:
         sub = Subject.query.get(sid)
         qs = Question.query.filter_by(subject_id=sid).all()
-        sub_items = [{'q': q, 'opts': [{'key':'A','text':q.option_a},{'key':'B','text':q.option_b},{'key':'C','text':q.option_c},{'key':'D','text':q.option_d}]} for q in qs]
+        # Randomize question order (per subject)
+        random.shuffle(qs)
+
+        sub_items = []
+        for q in qs:
+            opts = [
+                {'key':'A','text':q.option_a},
+                {'key':'B','text':q.option_b},
+                {'key':'C','text':q.option_c},
+                {'key':'D','text':q.option_d},
+            ]
+            # Randomize option display order (keys stay A/B/C/D so grading still works)
+            random.shuffle(opts)
+            sub_items.append({'q': q, 'opts': opts})
+
         exam_data[sub.name] = sub_items
     return render_template('student/war_room.html', exam_data=exam_data, exam=exam)
 
