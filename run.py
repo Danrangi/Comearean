@@ -20,12 +20,28 @@ def _bootstrap_database(app):
             # Create tables (no-op if they already exist)
             db.create_all()
 
+            # --- Lightweight migration: add Question.image_path if missing (SQLite-safe) ---
+            cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(question)")).fetchall()]
+            if "image_path" not in cols:
+                db.session.execute(text("ALTER TABLE question ADD COLUMN image_path VARCHAR(300)"))
+                db.session.commit()
+                print("[*] Migrated: added question.image_path")
+
+
             # Quick check: does "user" table exist?
             # SQLite: querying sqlite_master is safe.
             r = db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='user'")).fetchone()
             if not r:
                 # create_all should have created it; if not, something is wrong
                 db.create_all()
+
+            # --- Lightweight migration: add Question.image_path if missing (SQLite-safe) ---
+            cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(question)")).fetchall()]
+            if "image_path" not in cols:
+                db.session.execute(text("ALTER TABLE question ADD COLUMN image_path VARCHAR(300)"))
+                db.session.commit()
+                print("[*] Migrated: added question.image_path")
+
 
             # Ensure superadmin exists (uses your known credentials)
             username = "CExamArena"
