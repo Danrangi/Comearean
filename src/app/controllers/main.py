@@ -45,8 +45,16 @@ def take_exam():
     for sid in selected_ids:
         sub = Subject.query.get(sid)
         qs = Question.query.filter_by(subject_id=sid).all()
+        # Apply per-subject question limit (default 50)
+        try:
+            limit = int(getattr(sub, 'question_limit', 50) or 50)
+        except Exception:
+            limit = 50
+        if limit < 1:
+            limit = 1
         # Randomize question order (per subject)
         random.shuffle(qs)
+        qs = qs[:min(len(qs), limit)]
 
         sub_items = []
         for q in qs:
