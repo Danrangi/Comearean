@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">Results for: {{ student.username }}</h4>
+      <div class="text-muted small">Download or review student attempts</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.index') }}">Back</a>
+  </div>
+
+  {% if results|length == 0 %}
+    <div class="alert alert-warning">No results found for this student yet.</div>
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Exam</th>
+                <th>Subject</th>
+                <th>Score</th>
+                <th>Total</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in results %}
+              <tr>
+                <td>{{ r.created_at }}</td>
+                <td>{{ r.exam_name if r.exam_name is defined else (r.exam if r.exam is defined else 'N/A') }}</td>
+                <td>{{ r.subject_name if r.subject_name is defined else (r.subject if r.subject is defined else 'N/A') }}</td>
+                <td>{{ r.score if r.score is defined else 'N/A' }}</td>
+                <td>{{ r.total if r.total is defined else (r.total_questions if r.total_questions is defined else 'N/A') }}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-success"
+                     href="{{ url_for('admin.download_student_result_pdf', student_id=student.id, result_id=r.id) }}">
+                    Download PDF
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
