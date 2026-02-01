@@ -55,7 +55,7 @@
                 {% set subject_idx = loop.index %}
                 
                 <div class="subject-section {% if not loop.first %}d-none{% endif %}" id="subject-{{ subject_idx }}">
-                    {% for item in items %}
+                    {% for q_num, item in enumerate(subject_data['questions'], 1) %}
                     {% set q_num = loop.index %}
                     <div class="mb-5 question-block" id="q-{{ subject_idx }}-{{ q_num }}" data-subject="{{ subject_idx }}" data-question="{{ q_num }}">
                         <h5 class="fw-bold mb-3">
