@@ -33,6 +33,11 @@
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-uppercase">Subject Title</label>
                         <input type="text" name="subject_name" class="form-control" placeholder="e.g. English Language" required>
+                <div class="mt-2">
+                    <label class="form-label">Question Limit</label>
+                    <input type="number" name="question_limit" class="form-control" value="50" min="1" max="300" required>
+                    <small class="text-muted">Example: JAMB English = 60, Other subjects = 40</small>
+                </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary w-100 fw-bold">
