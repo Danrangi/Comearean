@@ -48,7 +48,7 @@
                         <tbody>
                             {% for student in students %}
                             <tr>
-                                <td class="ps-4 fw-bold text-dark"><a href=\"{{ url_for('admin.center_student_results', student_id=student.id) }}\">{{ student.username }}</a></td>
+                                <td class="ps-4 fw-bold text-dark"><a href=\"{{ url_for('admin.center_student_results', student_id=student.id) }}\"><a href=\"{{ url_for('admin.center_student_results_simple', id=student.id) }}\">{{ student.username }}</a></a></td>
                                 <td>
                                     {% if student.is_writing %}
                                     <span class="badge bg-warning text-dark"><i class="fas fa-pen me-1"></i> Writing</span>

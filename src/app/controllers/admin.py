@@ -310,6 +310,21 @@ def download_student_result_pdf(student_id, result_id):
     return send_file(buf, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
 
+@bp.route('/student/results/<int:id>')
+def center_student_results_simple(id):
+    # Center admin can only view their own center students
+    if g.user.role not in ['centeradmin', 'superadmin']:
+        return "Unauthorized", 403
+
+    student = User.query.get_or_404(id)
+
+    if g.user.role == 'centeradmin' and student.center_id != g.user.center_id:
+        return "Unauthorized", 403
+
+    results = Result.query.filter_by(user_id=student.id).order_by(Result.created_at.desc()).all()
+    return render_template('admin/student_results.html', student=student, results=results)
+
+
 @bp.route('/download_sample_csv')
 def download_sample_csv():
     csv = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
