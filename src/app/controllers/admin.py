@@ -50,7 +50,14 @@ def index():
         exam_id = request.form.get('exam_id')
         name = request.form.get('subject_name')
         if exam_id and name:
-            new_sub = Subject(name=name, exam_id=exam_id)
+            limit_raw = (request.form.get('question_limit') or '').strip()
+            try:
+                qlimit = int(limit_raw) if limit_raw else 50
+            except Exception:
+                qlimit = 50
+            if qlimit < 1:
+                qlimit = 1
+            new_sub = Subject(name=name, exam_id=exam_id, question_limit=qlimit)
             db.session.add(new_sub)
             db.session.commit()
             flash(f"Subject '{name}' created successfully.", "success")
@@ -189,6 +196,14 @@ def edit_subject(id):
     sub = Subject.query.get_or_404(id)
     if request.method == 'POST':
         sub.name = request.form['name']
+        limit_raw = (request.form.get('question_limit') or '').strip()
+        try:
+            qlimit = int(limit_raw) if limit_raw else (sub.question_limit or 50)
+        except Exception:
+            qlimit = sub.question_limit or 50
+        if qlimit < 1:
+            qlimit = 1
+        sub.question_limit = qlimit
         db.session.commit()
         flash("Subject name updated.", "success")
         return redirect(url_for('admin.index'))
