@@ -35,6 +35,7 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
+    question_limit = db.Column(db.Integer, default=50)  # per-subject question count
     questions = db.relationship('Question', backref='subject', lazy=True)
 
 class Question(db.Model):

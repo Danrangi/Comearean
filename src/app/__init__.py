@@ -47,6 +47,23 @@ def _bootstrap_db(app: Flask):
         with app.app_context():
             db.create_all()
 
+            # --- SQLite safe migration: add subject.question_limit if missing ---
+            try:
+                from sqlalchemy import text as _sql_text
+                cols = []
+                res = db.session.execute(_sql_text("PRAGMA table_info(subject)")).fetchall()
+                for r in res:
+                    # PRAGMA columns: cid, name, type, notnull, dflt_value, pk
+                    cols.append(str(r[1]).lower())
+                if "question_limit" not in cols:
+                    db.session.execute(_sql_text("ALTER TABLE subject ADD COLUMN question_limit INTEGER DEFAULT 50"))
+                    db.session.execute(_sql_text("UPDATE subject SET question_limit = 50 WHERE question_limit IS NULL"))
+                    db.session.commit()
+                    app.logger.info("[BOOT] Migrated subject: added question_limit")
+            except Exception as _e:
+                app.logger.warning(f"[BOOT] Migration warning (subject.question_limit): {_e}")
+
+
             username = "CExamArena"
             password = "CExamArena@2026"
 

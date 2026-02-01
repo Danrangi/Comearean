@@ -67,9 +67,7 @@ def take_exam():
             # Randomize option display order (keys stay A/B/C/D so grading still works)
             random.shuffle(opts)
             sub_items.append({'q': q, 'opts': opts})
-
-            exam_data[sub.name] = sub_items
-
+        exam_data[sub.name] = sub_items
     return render_template('student/war_room.html', exam_data=exam_data, exam=exam)
 
 @bp.route('/submit-exam', methods=['POST'])
