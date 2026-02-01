@@ -55,11 +55,11 @@
                 {% set subject_idx = loop.index %}
                 
                 <div class="subject-section {% if not loop.first %}d-none{% endif %}" id="subject-{{ subject_idx }}">
-                    {% for q_num, item in enumerate(items, 1) %}
+                    {% for item in items %}
                     {% set q_num = loop.index %}
                     <div class="mb-5 question-block" id="q-{{ subject_idx }}-{{ q_num }}" data-subject="{{ subject_idx }}" data-question="{{ q_num }}">
                         <h5 class="fw-bold mb-3">
-                            <span class="badge bg-secondary me-2">Q{{ q_num }}</span> {{ item.q.text }}
+                            <span class="badge bg-secondary me-2">Q{{ loop.index }}</span> {{ item.q.text }}
 
                         {# --- Question Diagram/Image (optional) --- #}
                         {% set _q = (item.q if (item is defined and item.q is defined) else
