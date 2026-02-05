@@ -325,6 +325,23 @@ def center_student_results_simple(id):
     return render_template('admin/student_results.html', student=student, results=results)
 
 
+# --- Center Admin: View a student's results (alias routes to avoid 404) ---
+@bp.route('/student/results/<int:student_id>')
+@bp.route('/student/<int:student_id>/results')
+@bp.route('/results/student/<int:student_id>')
+def center_student_results_page(student_id):
+    if g.user.role not in ['centeradmin', 'superadmin']:
+        return "Unauthorized", 403
+
+    student = User.query.get_or_404(student_id)
+
+    if g.user.role == 'centeradmin' and student.center_id != g.user.center_id:
+        return "Unauthorized", 403
+
+    results = Result.query.filter_by(user_id=student.id).order_by(Result.created_at.desc()).all()
+    return render_template('admin/student_results.html', student=student, results=results)
+
+
 @bp.route('/download_sample_csv')
 def download_sample_csv():
     csv = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
