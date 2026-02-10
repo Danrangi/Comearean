@@ -48,7 +48,7 @@
                         <tbody>
                             {% for student in students %}
                             <tr>
-                                <td class="ps-4 fw-bold text-dark"><a href=\"{{ url_for('admin.center_student_results', student_id=student.id) }}\"><a href=\"{{ url_for('admin.center_student_results_simple', id=student.id) }}\"><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a></a></a></td>
+                                <td class="ps-4 fw-bold text-dark"><a href=\"{{ url_for('admin.center_student_results', student_id=student.id) }}\"><a href=\"{{ url_for('admin.center_student_results_simple', id=student.id) }}\"><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a></a></a></a></td>
                                 <td>
                                     {% if student.is_writing %}
                                     <span class="badge bg-warning text-dark"><i class="fas fa-pen me-1"></i> Writing</span>
@@ -91,7 +91,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" value="<a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a>" required>
+                    <input type="text" name="username" class="form-control" value="<a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a></a>" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">New Password</label>
@@ -114,7 +114,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete <strong><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a></strong>?</p>
+                <p>Are you sure you want to delete <strong><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}"><a href="/admin/student/results/{{ student.id }}">{{ student.username }}</a></a></a></strong>?</p>
                 <p class="small text-muted mb-0">This will permanently remove their exam history and results.</p>
             </div>
             <div class="modal-footer">
