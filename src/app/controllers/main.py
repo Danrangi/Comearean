@@ -35,10 +35,21 @@ def exam_setup(exam_id):
 def take_exam():
     exam_id = request.form.get('exam_id')
     selected_ids = request.form.getlist('subjects')
-    if not selected_ids:
-        flash("Please select at least one subject.", "warning")
-        return redirect(url_for('main.exam_setup', exam_id=exam_id))
-    exam = Exam.query.get(exam_id)
+
+    if not exam_id:
+        flash("Invalid exam selection.", "danger")
+        return redirect(url_for('main.dashboard'))
+
+    exam = Exam.query.get_or_404(exam_id)
+
+    # Enforce EXACT required subject count (e.g. JAMB = 4)
+    required = int(getattr(exam, 'required_subjects', 1) or 1)
+    if required < 1:
+        required = 1
+
+    if len(selected_ids) != required:
+        flash(f"Please select exactly {required} subject(s) to begin.", "warning")
+        return redirect(url_for('main.exam_setup', exam_id=exam.id))
     g.user.is_writing = True
     db.session.commit()
     exam_data = {}
@@ -73,21 +84,84 @@ def take_exam():
 @bp.route('/submit-exam', methods=['POST'])
 @login_required
 def submit_exam():
-    score = 0; total = 0; results_list = []
-    for key, value in request.form.items():
-        if key.startswith('q_'):
-            total += 1
-            q_id = int(key.split('_')[1])
+    score = 0
+    total = 0
+    results_list = []
+
+    # All questions shown in war room (ensures skipped = 0)
+    qids = request.form.getlist('qid')
+
+    # Backward compatibility: if qids missing, fall back to old behavior
+    if not qids:
+        for key, value in request.form.items():
+            if key.startswith('q_'):
+                total += 1
+                q_id = int(key.split('_')[1])
+                q = Question.query.get(q_id)
+                if not q:
+                    continue
+                is_correct = (q.correct_option == value)
+                if is_correct:
+                    score += 1
+                results_list.append({
+                    'question_text': q.text,
+                    'user_answer': value,
+                    'correct_answer': q.correct_option,
+                    'is_correct': is_correct,
+                    'explanation': q.explanation
+                })
+    else:
+        for qid in qids:
+            try:
+                q_id = int(qid)
+            except Exception:
+                continue
+
             q = Question.query.get(q_id)
-            if not q: continue
-            is_correct = q.correct_option == value
-            if is_correct: score += 1
-            results_list.append({'question_text': q.text, 'user_answer': value, 'correct_answer': q.correct_option, 'is_correct': is_correct, 'explanation': q.explanation})
-    new_result = Result(user_id=g.user.id, center_id=g.user.center_id, exam_name=request.form.get('exam_name'), score=float(score), total_questions=total)
+            if not q:
+                continue
+
+            total += 1
+            ans = (request.form.get(f"q_{q_id}") or "").strip().upper()
+
+            if not ans:
+                # skipped => zero mark
+                is_correct = False
+                user_ans = "SKIPPED"
+            else:
+                is_correct = (q.correct_option == ans)
+                user_ans = ans
+
+            if is_correct:
+                score += 1
+
+            results_list.append({
+                'question_text': q.text,
+                'user_answer': user_ans,
+                'correct_answer': q.correct_option,
+                'is_correct': is_correct,
+                'explanation': q.explanation
+            })
+
+    new_result = Result(
+        user_id=g.user.id,
+        center_id=g.user.center_id,
+        exam_name=request.form.get('exam_name'),
+        score=float(score),
+        total_questions=total
+    )
+
     g.user.is_writing = False
     db.session.add(new_result)
     db.session.commit()
-    results_data = {'id': new_result.id, 'score': score, 'total_questions': total, 'subject_name': request.form.get('exam_name'), 'results_list': results_list}
+
+    results_data = {
+        'id': new_result.id,
+        'score': score,
+        'total_questions': total,
+        'subject_name': request.form.get('exam_name'),
+        'results_list': results_list
+    }
     return render_template('student/results.html', results=results_data)
 
 @bp.route('/ai-preview')

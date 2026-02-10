@@ -88,6 +88,7 @@
                         <div class="option-card" id="opt-{{ subject_idx }}-{{ q_num }}-{{ opt.key }}" 
                              onclick="selectAnswer('{{ subject_idx }}', '{{ q_num }}', '{{ item.q.id }}', '{{ opt.key }}')">
                             
+                            <input type="hidden" name="qid" value="{{ item.q.id }}">
                             <input type="radio" name="q_{{ item.q.id }}" value="{{ opt.key }}" class="d-none">
                             <span class="fw-bold me-2">{{ opt.key }}.</span> {{ opt.text }}
                         </div>
@@ -219,7 +220,7 @@
 
         let time = {{ exam.duration_minutes * 60 }};
         setInterval(() => {
-            if (time <= 0) document.getElementById('examForm').submit();
+            if (time <= 0 && !window.__submittedExam) { window.__submittedExam = true; document.getElementById('examForm').submit(); return; }
             let h = Math.floor(time/3600), m = Math.floor((time%3600)/60), s = time%60;
             document.getElementById('timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
             time--;
