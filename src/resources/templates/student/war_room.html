@@ -35,6 +35,7 @@
     <form method="POST" action="{{ url_for('main.submit_exam') }}" id="examForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="exam_name" value="{{ exam.name }}">
+<input type="hidden" name="exam_id" value="{{ exam.id }}">
 
         <header class="war-room-header">
             <div class="d-flex">
@@ -89,6 +90,7 @@
                              onclick="selectAnswer('{{ subject_idx }}', '{{ q_num }}', '{{ item.q.id }}', '{{ opt.key }}')">
                             
                             <input type="hidden" name="qid" value="{{ item.q.id }}">
+                            <input type="hidden" name="all_q_ids" value="{{ item.q.id }}">
                             <input type="radio" name="q_{{ item.q.id }}" value="{{ opt.key }}" class="d-none">
                             <span class="fw-bold me-2">{{ opt.key }}.</span> {{ opt.text }}
                         </div>
