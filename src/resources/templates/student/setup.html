@@ -1,29 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center py-5">
-    <div class="col-md-6">
-        <div class="card shadow p-4">
-            <h3 class="fw-bold text-primary mb-3">{{ exam.name }} Setup</h3>
-            <p>Select exactly <strong>{{ exam.required_subjects }}</strong> subjects to begin.</p>
-            <hr>
-            <form action="{{ url_for('main.take_exam') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="exam_id" value="{{ exam.id }}">
-                <div class="row g-3">
-                    {% for subject in subjects %}
-                    <div class="col-md-6">
-                        <div class="form-check card p-2">
-                            <input class="form-check-input ms-1" type="checkbox" name="subjects" value="{{ subject.id }}" id="sub{{ subject.id }}">
-                            <label class="form-check-label ms-4 fw-bold" for="sub{{ subject.id }}">
-                                {{ subject.name }}
-                            </label>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <button type="submit" class="btn btn-success w-100 mt-4 fw-bold py-2">ENTER WAR ROOM</button>
-            </form>
+  <div class="col-md-7">
+    <div class="card shadow p-4">
+      <h3 class="fw-bold text-primary mb-2">{{ exam.name }} Setup</h3>
+      <div class="text-muted">
+        Select exactly <strong id="reqCount">{{ exam.required_subjects }}</strong> subjects to begin.
+      </div>
+      <div class="alert alert-warning mt-3 py-2 d-none" id="countWarn">
+        You must select exactly <strong>{{ exam.required_subjects }}</strong> subjects.
+      </div>
+      <hr>
+
+      <form action="{{ url_for('main.take_exam') }}" method="POST" id="setupForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="exam_id" value="{{ exam.id }}">
+
+        <div class="row g-3">
+          {% for subject in subjects %}
+          <div class="col-md-6">
+            <div class="form-check card p-2">
+              <input class="form-check-input ms-1 subjCheck" type="checkbox" name="subjects" value="{{ subject.id }}" id="sub{{ subject.id }}">
+              <label class="form-check-label ms-4 fw-bold" for="sub{{ subject.id }}">
+                {{ subject.name }}
+              </label>
+              <div class="text-muted small ms-4">Limit: {{ subject.question_limit }}</div>
+            </div>
+          </div>
+          {% endfor %}
         </div>
+
+        <button type="submit" class="btn btn-success w-100 mt-4 fw-bold py-2" id="startBtn" disabled>
+          ENTER WAR ROOM
+        </button>
+      </form>
     </div>
+  </div>
 </div>
+
+<script>
+(function(){
+  const required = parseInt(document.getElementById('reqCount').innerText || "1", 10);
+  const checks = Array.from(document.querySelectorAll('.subjCheck'));
+  const btn = document.getElementById('startBtn');
+  const warn = document.getElementById('countWarn');
+
+  function update(){
+    const count = checks.filter(c => c.checked).length;
+    const ok = (count === required);
+    btn.disabled = !ok;
+    warn.classList.toggle('d-none', ok || count === 0);
+  }
+  checks.forEach(c => c.addEventListener('change', update));
+  update();
+})();
+</script>
 {% endblock %}

@@ -40,12 +40,51 @@ def _setup_file_logging(instance_path: str) -> str:
 
 
 # ✅ MUST BE ABOVE create_app()
+
+def _migrate_sqlite_results_table(app) -> None:
+    """
+    SQLite won't auto-add new columns after db.create_all().
+    So we add missing columns for Result safely on existing DBs.
+    """
+    try:
+        from sqlalchemy import text
+        with app.app_context():
+            engine = db.engine
+            if "sqlite" not in str(engine.url).lower():
+                return
+
+            rows = db.session.execute(text("PRAGMA table_info(result)")).fetchall()
+            cols = {str(r[1]).lower() for r in rows}  # r = (cid,name,type,notnull,dflt,pk)
+
+            alters = []
+            if "attempt_id" not in cols:
+                alters.append("ALTER TABLE result ADD COLUMN attempt_id VARCHAR(40)")
+            if "exam_id" not in cols:
+                alters.append("ALTER TABLE result ADD COLUMN exam_id INTEGER")
+            if "subject_id" not in cols:
+                alters.append("ALTER TABLE result ADD COLUMN subject_id INTEGER")
+            if "subject_name" not in cols:
+                alters.append("ALTER TABLE result ADD COLUMN subject_name VARCHAR(100)")
+
+            for sql in alters:
+                db.session.execute(text(sql))
+            if alters:
+                db.session.commit()
+                try:
+                    app.logger.info(f"[BOOT] Migrated result table: {len(alters)} columns added")
+                except Exception:
+                    pass
+    except Exception as e:
+        print("[BOOT] migrate warning:", e)
+
+
 def _bootstrap_db(app: Flask):
     try:
         from src.app.models import User
 
         with app.app_context():
             db.create_all()
+            _ensure_result_columns(app)
 
             # --- SQLite safe migration: add subject.question_limit if missing ---
             try:
